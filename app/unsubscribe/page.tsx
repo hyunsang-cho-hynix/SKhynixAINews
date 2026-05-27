@@ -1,11 +1,11 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
-export default function UnsubscribePage() {
+function UnsubscribeContent() {
   const searchParams = useSearchParams();
   const emailFromUrl = searchParams.get("email") || "";
 
@@ -49,55 +49,71 @@ export default function UnsubscribePage() {
   }
 
   return (
+    <section className="mx-auto max-w-xl px-6 py-10">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+        <h1 className="text-3xl font-bold">Unsubscribe</h1>
+
+        <p className="mt-3 text-slate-400">
+          Confirm the email address you want to unsubscribe from the daily news
+          brief.
+        </p>
+
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="your.email@company.com"
+          className="mt-6 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+        />
+
+        <button
+          type="button"
+          onClick={unsubscribe}
+          disabled={loading}
+          className="mt-4 w-full rounded-xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Unsubscribing..." : "Unsubscribe"}
+        </button>
+
+        {message && (
+          <div className="mt-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-green-200">
+            {message}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+            {errorMessage}
+          </div>
+        )}
+
+        <Link
+          href="/"
+          className="mt-6 inline-block text-sm text-blue-300 hover:text-blue-200"
+        >
+          ← Back to Home
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+export default function UnsubscribePage() {
+  return (
     <main className="min-h-screen bg-slate-950 text-white">
       <Navbar />
 
-      <section className="mx-auto max-w-xl px-6 py-10">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
-          <h1 className="text-3xl font-bold">Unsubscribe</h1>
-
-          <p className="mt-3 text-slate-400">
-            Confirm the email address you want to unsubscribe from the daily
-            news brief.
-          </p>
-
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="your.email@company.com"
-            className="mt-6 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
-          />
-
-          <button
-            type="button"
-            onClick={unsubscribe}
-            disabled={loading}
-            className="mt-4 w-full rounded-xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Unsubscribing..." : "Unsubscribe"}
-          </button>
-
-          {message && (
-            <div className="mt-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-green-200">
-              {message}
+      <Suspense
+        fallback={
+          <section className="mx-auto max-w-xl px-6 py-10">
+            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+              <p className="text-slate-400">Loading unsubscribe page...</p>
             </div>
-          )}
-
-          {errorMessage && (
-            <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
-              {errorMessage}
-            </div>
-          )}
-
-          <Link
-            href="/"
-            className="mt-6 inline-block text-sm text-blue-300 hover:text-blue-200"
-          >
-            ← Back to Home
-          </Link>
-        </div>
-      </section>
+          </section>
+        }
+      >
+        <UnsubscribeContent />
+      </Suspense>
     </main>
   );
 }
