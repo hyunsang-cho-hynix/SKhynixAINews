@@ -36,7 +36,7 @@ export default function LoginPage() {
         throw error;
       }
 
-      router.push("/settings/topics");
+      router.push("/subscribe");
       router.refresh();
     } catch (error) {
       setErrorMessage(
