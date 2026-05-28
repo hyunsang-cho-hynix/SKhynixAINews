@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/jobs/send-daily-brief?secret=skhynix_daily_brief_secret_2026_demo",
+      "path": "/api/jobs/send-daily-brief?secret=thisisdevelopedbyhyunsangcho",
       "schedule": "0 12 * * *"
     }
   ]
