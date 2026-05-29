@@ -99,13 +99,13 @@ export default function TopicPage({ params }: TopicPageProps) {
   );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
@@ -123,24 +123,24 @@ export default function TopicPage({ params }: TopicPageProps) {
         </div>
 
         <div className="mb-8 grid gap-5 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
             <p className="text-sm text-slate-400">Topic</p>
             <p className="mt-2 text-2xl font-bold">{topicName}</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
             <p className="text-sm text-slate-400">Saved Articles</p>
             <p className="mt-2 text-3xl font-bold">{articles.length}</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
             <p className="text-sm text-slate-400">Source</p>
             <p className="mt-2 text-2xl font-bold">Supabase</p>
           </div>
         </div>
 
         {loading && (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
+          <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8 text-center">
             <p className="text-slate-400">Loading topic articles...</p>
           </div>
         )}
@@ -153,7 +153,7 @@ export default function TopicPage({ params }: TopicPageProps) {
         )}
 
         {!loading && !errorMessage && topArticles.length === 0 && (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
+          <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8 text-center">
             <h2 className="text-2xl font-semibold">
               No articles found for {topicName}
             </h2>
@@ -165,14 +165,14 @@ export default function TopicPage({ params }: TopicPageProps) {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/admin"
-                className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400"
+                className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
               >
                 Go to Admin
               </Link>
 
               <Link
                 href="/news-ai"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-5 py-3 font-semibold text-slate-200 hover:bg-slate-800"
+                className="rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 font-semibold text-slate-200 hover:bg-slate-800"
               >
                 Go to News + AI
               </Link>
@@ -185,7 +185,7 @@ export default function TopicPage({ params }: TopicPageProps) {
             {topArticles.map((article) => (
               <article
                 key={article.id}
-                className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg"
+                className="overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-lg"
               >
                 {article.image_url && (
                   <img
@@ -197,7 +197,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 
                 <div className="p-6">
                   <div className="mb-4 flex items-center justify-between gap-4">
-                    <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                    <span className="rounded-full bg-[#F47725]/20 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                       {article.topic}
                     </span>
 
@@ -214,7 +214,7 @@ export default function TopicPage({ params }: TopicPageProps) {
                     {article.summary}
                   </p>
 
-                  <div className="mb-5 rounded-2xl bg-slate-950 p-4">
+                  <div className="mb-5 rounded-2xl bg-[#26262C] p-4">
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Why this matters
                     </p>
@@ -223,7 +223,7 @@ export default function TopicPage({ params }: TopicPageProps) {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 pt-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#454550] pt-4 text-sm">
                     <div className="text-slate-400">
                       <p>{article.source}</p>
                       <p>{new Date(article.published_at).toLocaleString()}</p>
@@ -231,7 +231,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 
                     <Link
                       href={`/brief-article/${article.id}`}
-                      className="rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-400"
+                      className="rounded-lg bg-[#F47725] px-4 py-2 font-semibold text-white hover:bg-[#ff8a3d]"
                     >
                       Read Brief
                     </Link>

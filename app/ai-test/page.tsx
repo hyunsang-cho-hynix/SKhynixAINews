@@ -51,13 +51,13 @@ export default function AiTestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-4xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
@@ -75,10 +75,10 @@ export default function AiTestPage() {
           </p>
         </div>
 
-        <div className="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mb-6 rounded-3xl border border-[#454550] bg-[#303039] p-6">
           <h2 className="mb-3 text-xl font-semibold">Sample Input Article</h2>
 
-          <div className="rounded-2xl bg-slate-950 p-5">
+          <div className="rounded-2xl bg-[#26262C] p-5">
             <p className="mb-2 text-sm text-slate-400">Title</p>
             <p className="mb-5 font-semibold">
               HBM Demand Rises as AI Data Centers Continue to Expand
@@ -97,7 +97,7 @@ export default function AiTestPage() {
             type="button"
             onClick={runAiTest}
             disabled={loading}
-            className="mt-6 rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Running Gemini AI..." : "Run AI Processing"}
           </button>

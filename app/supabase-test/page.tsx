@@ -37,18 +37,18 @@ export default function SupabaseTestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+        <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8">
           <h1 className="text-3xl font-bold">Supabase Connection Test</h1>
           <p className="mt-3 text-slate-400">
             This checks whether the app can connect to Supabase Auth using your
@@ -59,13 +59,13 @@ export default function SupabaseTestPage() {
             type="button"
             onClick={testSupabaseConnection}
             disabled={loading}
-            className="mt-6 rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Testing..." : "Test Supabase Connection"}
           </button>
 
           {status && (
-            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+            <div className="mt-6 rounded-2xl border border-[#454550] bg-[#26262C] p-5">
               <p className="text-slate-200">{status}</p>
             </div>
           )}

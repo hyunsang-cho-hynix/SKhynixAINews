@@ -2,39 +2,36 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const router = useRouter();
+  const [message, setMessage] = useState("");
 
   async function handleSignup() {
     setLoading(true);
-    setMessage("");
     setErrorMessage("");
+    setMessage("");
 
     try {
-      if (!email.trim()) {
-        throw new Error("Please enter your email.");
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Please enter your email and password.");
       }
 
       if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters.");
-      }
-
-      if (password !== confirmPassword) {
-        throw new Error("Passwords do not match.");
+        throw new Error("Password should be at least 6 characters.");
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -42,11 +39,15 @@ export default function SignupPage() {
         throw error;
       }
 
-      if (data.user) {
+      if (data.session || data.user) {
         router.push("/subscribe");
-      } else {
-        setMessage("Signup request completed.");
+        router.refresh();
+        return;
       }
+
+      setMessage(
+        "Account created. Please check your email to confirm your account, then log in."
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to create account."
@@ -56,118 +57,119 @@ export default function SignupPage() {
     }
   }
 
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      handleSignup();
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-md px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="mb-6 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 shadow-xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-100">
-            Create Account
-          </p>
-          <h1 className="text-3xl font-bold">Sign up for SK hynix AI News</h1>
-          <p className="mt-3 text-sm text-blue-50">
-            Create an account to manage your email subscription and topic
-            preferences.
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
+
+          <div className="p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              Create Account
+            </p>
+
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Join SK hynix AI News
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-zinc-300">
+              Create an account to subscribe to daily technology news briefs and
+              manage your topic preferences.
+            </p>
+          </div>
         </div>
 
         {message && (
-          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-green-200">
-            <h2 className="font-semibold">Signup Successful</h2>
-            <p className="mt-2 text-sm text-green-100/80">{message}</p>
-
-            <Link
-              href="/login"
-              className="mt-4 inline-block rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-green-400"
-            >
-              Go to Login
-            </Link>
+          <div className="mb-6 rounded-2xl border border-[#F47725]/30 bg-[#F47725]/10 p-5 text-orange-100">
+            <h2 className="font-semibold">Account Created</h2>
+            <p className="mt-2 text-sm text-orange-100/80">{message}</p>
           </div>
         )}
 
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+          <div className="mb-6 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
             <h2 className="font-semibold">Signup Error</h2>
             <p className="mt-2 text-sm">{errorMessage}</p>
           </div>
         )}
 
-        <form className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+        <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 shadow-sm">
           <div className="mb-5">
             <label
               htmlFor="email"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Email Address
             </label>
+
             <input
               id="email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="your.email@company.com"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
-            />
-          </div>
-
-          <div className="mb-5">
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-semibold text-slate-200"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Minimum 6 characters"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              onKeyDown={handleKeyDown}
+              placeholder="you@example.com"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-[#F47725]"
             />
           </div>
 
           <div className="mb-6">
             <label
-              htmlFor="confirm-password"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              htmlFor="password"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
-              Confirm Password
+              Password
             </label>
+
             <input
-              id="confirm-password"
+              id="password"
               type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Confirm your password"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Create a password"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-[#F47725]"
             />
+
+            <p className="mt-2 text-xs text-zinc-400">
+              Use at least 6 characters.
+            </p>
           </div>
 
           <button
             type="button"
             onClick={handleSignup}
             disabled={loading}
-            className="w-full rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
 
-          <p className="mt-5 text-center text-sm text-slate-400">
+          <p className="mt-6 text-center text-sm text-zinc-400">
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-300 hover:text-blue-200">
-              Log in
+            <Link
+              href="/login"
+              className="font-semibold text-[#ffb17a] hover:text-[#F47725]"
+            >
+              Login
             </Link>
           </p>
-        </form>
+        </div>
       </section>
     </main>
   );

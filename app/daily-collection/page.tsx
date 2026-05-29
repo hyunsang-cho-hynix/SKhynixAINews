@@ -57,13 +57,13 @@ export default function DailyCollectionPage() {
   );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
@@ -81,7 +81,7 @@ export default function DailyCollectionPage() {
           </p>
         </div>
 
-        <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mb-8 rounded-3xl border border-[#454550] bg-[#303039] p-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
               <h2 className="text-xl font-semibold">
@@ -97,7 +97,7 @@ export default function DailyCollectionPage() {
               type="button"
               onClick={runDailyCollection}
               disabled={loading}
-              className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Collecting News..." : "Run Daily Collection"}
             </button>
@@ -118,21 +118,21 @@ export default function DailyCollectionPage() {
 
         {articles.length > 0 && (
           <div className="mb-8 grid gap-5 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
               <p className="text-sm text-slate-400">Total Articles</p>
               <p className="mt-2 text-3xl font-bold">{articles.length}</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
               <p className="text-sm text-slate-400">Topics Collected</p>
               <p className="mt-2 text-3xl font-bold">
                 {Object.keys(groupedArticles).length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
               <p className="text-sm text-slate-400">Next Step</p>
-              <p className="mt-2 text-lg font-semibold text-blue-300">
+              <p className="mt-2 text-lg font-semibold text-[#ffb17a]">
                 Process with Gemini
               </p>
             </div>
@@ -142,7 +142,7 @@ export default function DailyCollectionPage() {
         <div className="space-y-10">
           {Object.entries(groupedArticles).map(([topic, topicArticles]) => (
             <section key={topic}>
-              <div className="mb-4 border-b border-slate-800 pb-3">
+              <div className="mb-4 border-b border-[#454550] pb-3">
                 <h2 className="text-2xl font-bold">{topic}</h2>
                 <p className="mt-1 text-sm text-slate-400">
                   {topicArticles.length} real public news articles collected
@@ -153,7 +153,7 @@ export default function DailyCollectionPage() {
                 {topicArticles.map((article) => (
                   <article
                     key={article.url}
-                    className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-lg"
+                    className="overflow-hidden rounded-3xl border border-[#454550] bg-[#303039] shadow-lg"
                   >
                     {article.image && (
                       <img
@@ -165,7 +165,7 @@ export default function DailyCollectionPage() {
 
                     <div className="p-6">
                       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                        <span className="rounded-full bg-[#F47725]/20 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                           {article.assignedTopic}
                         </span>
 
@@ -182,7 +182,7 @@ export default function DailyCollectionPage() {
                         {article.description || article.content}
                       </p>
 
-                      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 pt-5 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#454550] pt-5 text-sm">
                         <div className="text-slate-400">
                           <p>{article.source?.name || "Unknown source"}</p>
                         </div>
@@ -192,7 +192,7 @@ export default function DailyCollectionPage() {
                             href={`/news-ai?query=${encodeURIComponent(
                               article.title
                             )}`}
-                            className="rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-400"
+                            className="rounded-lg bg-[#F47725] px-4 py-2 font-semibold text-white hover:bg-[#ff8a3d]"
                           >
                             Process in News + AI
                           </Link>
@@ -201,7 +201,7 @@ export default function DailyCollectionPage() {
                             href={article.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800"
+                            className="rounded-lg border border-[#454550] px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800"
                           >
                             Original
                           </a>

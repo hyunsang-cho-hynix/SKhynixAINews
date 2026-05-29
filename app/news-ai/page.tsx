@@ -4,304 +4,251 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
-type GNewsArticle = {
-  title: string;
-  description: string;
-  content: string;
-  url: string;
-  image: string;
-  publishedAt: string;
-  source: {
-    name: string;
-    url: string;
-  };
+type SearchResult = {
+  title?: string;
+  polishedTitle?: string;
+  summary?: string;
+  reason?: string;
+  source?: string;
+  url?: string;
+  publishedAt?: string;
+  topic?: string;
+  importanceScore?: number;
 };
 
-type AiResult = {
-  polishedTitle: string;
-  topic: string;
-  summary: string;
-  importanceScore: number;
-  reason: string;
-};
+export default function NewsAIPage() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searched, setSearched] = useState(false);
 
-export default function NewsAiPage() {
-  const [query, setQuery] = useState("semiconductor AI HBM");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [aiLoadingUrl, setAiLoadingUrl] = useState("");
-  const [articles, setArticles] = useState<GNewsArticle[]>([]);
-  const [aiResults, setAiResults] = useState<Record<string, AiResult>>({});
-  const [error, setError] = useState("");
+  async function handleSearch() {
+    setErrorMessage("");
+    setSearched(true);
 
-  async function searchNews() {
-    setSearchLoading(true);
-    setError("");
-    setArticles([]);
-    setAiResults({});
-
-    try {
-      const response = await fetch(
-        `/api/news/search?q=${encodeURIComponent(query)}&max=6`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "News search failed.");
-      }
-
-      setArticles(data.articles || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred.");
-    } finally {
-      setSearchLoading(false);
+    if (!query.trim()) {
+      setErrorMessage("Please enter a search query.");
+      return;
     }
-  }
 
-  async function processWithGemini(article: GNewsArticle) {
-    setAiLoadingUrl(article.url);
-    setError("");
+    setLoading(true);
+    setResults([]);
 
     try {
-      const response = await fetch("/api/ai/summarize", {
+      const response = await fetch("/api/news-ai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: article.title,
-          description:
-            article.description ||
-            article.content ||
-            "No article description was provided.",
-          source: article.source?.name || "Unknown source",
+          query: query.trim(),
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "AI processing failed.");
+        throw new Error(data.error || "Failed to search news.");
       }
 
-      setAiResults((currentResults) => ({
-        ...currentResults,
-        [article.url]: data.result,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred.");
+      const searchResults =
+        data.results || data.articles || data.processedArticles || [];
+
+      setResults(searchResults);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to search news."
+      );
     } finally {
-      setAiLoadingUrl("");
+      setLoading(false);
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      handleSearch();
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
-      <section className="mx-auto max-w-6xl px-6 py-10">
+      <section className="mx-auto max-w-6xl px-6 py-8">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="mb-8 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 shadow-xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-100">
-            Search News + AI
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
 
-          <h1 className="mb-4 text-4xl font-bold tracking-tight">
-            Search Real News and Analyze with Gemini
-          </h1>
+          <div className="p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              Search News + AI
+            </p>
 
-          <p className="max-w-3xl text-blue-50">
-            Search public news using GNews, then use Gemini to polish the title,
-            classify the topic, summarize the article, and assign an importance
-            score.
-          </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Search Public Technology News
+            </h1>
+
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+              Search semiconductor, AI, IT, automation, robotics, and technology
+              news. AI can help summarize and identify why each story matters.
+            </p>
+          </div>
         </div>
 
-        <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mb-6 rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
           <label
-            htmlFor="query"
-            className="mb-2 block text-sm font-semibold text-slate-200"
+            htmlFor="newsSearch"
+            className="mb-2 block text-sm font-semibold text-zinc-200"
           >
             Search Query
           </label>
 
           <div className="flex flex-col gap-3 md:flex-row">
             <input
-              id="query"
+              id="newsSearch"
+              type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
-              placeholder="semiconductor AI HBM"
+              onKeyDown={handleKeyDown}
+              placeholder="Example: HBM, SK hynix, AI data center, semiconductor packaging"
+              className="flex-1 rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-[#F47725]"
             />
 
             <button
               type="button"
-              onClick={searchNews}
-              disabled={searchLoading}
-              className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleSearch}
+              disabled={loading}
+              className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {searchLoading ? "Searching..." : "Search Real News"}
+              {loading ? "Searching..." : "Search"}
             </button>
           </div>
 
-          <p className="mt-3 text-xs text-slate-500">
-            This uses your GNews free-tier API key. Avoid clicking repeatedly to
-            preserve daily request quota.
+          <p className="mt-3 text-xs text-zinc-400">
+            Results depend on the available news API and current rate limits.
           </p>
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
-            <h2 className="font-semibold">Error</h2>
-            <p className="mt-2 text-sm">{error}</p>
+        {errorMessage && (
+          <div className="mb-6 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
+            <h2 className="font-semibold">Search Error</h2>
+            <p className="mt-2 text-sm">{errorMessage}</p>
           </div>
         )}
 
-        {articles.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold">
-              Real News Search Results
+        {loading && (
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
+            <p className="text-zinc-300">Searching and analyzing news...</p>
+          </div>
+        )}
+
+        {!loading && searched && !errorMessage && results.length === 0 && (
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
+            <h2 className="text-2xl font-semibold text-white">
+              No results found
             </h2>
-            <p className="text-sm text-slate-400">
-              Click “Process with Gemini” to generate AI summary, topic, score,
-              and business relevance.
+
+            <p className="mt-3 text-zinc-300">
+              Try a broader keyword such as semiconductor, AI chip, HBM, data
+              center, or cloud infrastructure.
             </p>
           </div>
         )}
 
-        <div className="grid gap-5">
-          {articles.map((article) => {
-            const aiResult = aiResults[article.url];
-            const isProcessing = aiLoadingUrl === article.url;
+        {!loading && results.length > 0 && (
+          <section>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-white">Search Results</h2>
+              <p className="text-sm text-zinc-400">
+                AI-assisted summaries for your search query
+              </p>
+            </div>
 
-            return (
-              <article
-                key={article.url}
-                className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-lg"
-              >
-                <div className="grid gap-0 md:grid-cols-[280px_1fr]">
-                  <div className="bg-slate-950">
-                    {article.image ? (
-                      <img
-                        src={article.image}
-                        alt=""
-                        className="h-full min-h-56 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full min-h-56 items-center justify-center p-6 text-center text-sm text-slate-500">
-                        No image available
-                      </div>
-                    )}
-                  </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {results.map((article, index) => {
+                const title =
+                  article.polishedTitle || article.title || "Untitled Article";
 
-                  <div className="p-6">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                      <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
-                        Real News Article
+                const summary =
+                  article.summary ||
+                  "No summary is available for this article.";
+
+                const reason =
+                  article.reason ||
+                  "This article may be relevant to the searched technology topic.";
+
+                return (
+                  <article
+                    key={`${article.url || title}-${index}`}
+                    className="rounded-2xl border border-[#454550] bg-[#303039] p-5 shadow-sm transition hover:border-[#F47725]/70 hover:bg-[#383843]"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
+                        {article.topic || "Technology"}
                       </span>
 
-                      <span className="text-xs text-slate-500">
-                        {new Date(article.publishedAt).toLocaleString()}
+                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
+                        AI Assisted
                       </span>
                     </div>
 
-                    <h3 className="mb-3 text-2xl font-semibold leading-snug">
-                      {article.title}
+                    {typeof article.importanceScore === "number" && (
+                      <p className="mb-3 text-xs text-zinc-400">
+                        Score {article.importanceScore}/10
+                      </p>
+                    )}
+
+                    <h3 className="mb-3 line-clamp-2 text-lg font-bold leading-snug text-white">
+                      {title}
                     </h3>
 
-                    <p className="mb-5 text-sm leading-6 text-slate-300">
-                      {article.description || article.content}
+                    <p className="mb-4 line-clamp-3 text-sm leading-6 text-zinc-300">
+                      {summary}
                     </p>
 
-                    <div className="mb-5 text-sm text-slate-400">
-                      <p>Source: {article.source?.name || "Unknown source"}</p>
+                    <div className="mb-4 rounded-xl bg-[#26262C] p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                        Why this matters
+                      </p>
+
+                      <p className="line-clamp-3 text-sm leading-6 text-zinc-300">
+                        {reason}
+                      </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 border-t border-slate-800 pt-5">
-                      <button
-                        type="button"
-                        onClick={() => processWithGemini(article)}
-                        disabled={isProcessing}
-                        className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isProcessing
-                          ? "Processing with Gemini..."
-                          : "Process with Gemini"}
-                      </button>
+                    <div className="border-t border-[#454550] pt-4 text-sm text-zinc-400">
+                      <p className="truncate">
+                        {article.source || "Unknown source"}
+                      </p>
 
+                      {article.publishedAt && (
+                        <p>{new Date(article.publishedAt).toLocaleDateString()}</p>
+                      )}
+                    </div>
+
+                    {article.url && (
                       <a
                         href={article.url}
                         target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex rounded-xl bg-[#F47725] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff8a3d]"
                       >
-                        Open Original
+                        Open Original Article
                       </a>
-                    </div>
-
-                    {aiResult && (
-                      <div className="mt-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                          <h4 className="text-lg font-semibold text-green-200">
-                            Gemini Analysis Result
-                          </h4>
-
-                          <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-300">
-                            Score {aiResult.importanceScore}/10
-                          </span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-green-100/60">
-                              Polished Title
-                            </p>
-                            <p className="mt-1 font-semibold text-green-50">
-                              {aiResult.polishedTitle}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-green-100/60">
-                              Topic
-                            </p>
-                            <p className="mt-1 font-semibold text-green-50">
-                              {aiResult.topic}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-green-100/60">
-                              AI Summary
-                            </p>
-                            <p className="mt-1 leading-7 text-green-50">
-                              {aiResult.summary}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-green-100/60">
-                              Why This Matters
-                            </p>
-                            <p className="mt-1 leading-7 text-green-50">
-                              {aiResult.reason}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
                     )}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </section>
     </main>
   );

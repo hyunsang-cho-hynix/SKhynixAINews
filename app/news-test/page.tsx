@@ -48,13 +48,13 @@ export default function NewsTestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
@@ -72,7 +72,7 @@ export default function NewsTestPage() {
           </p>
         </div>
 
-        <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mb-8 rounded-3xl border border-[#454550] bg-[#303039] p-6">
           <label
             htmlFor="query"
             className="mb-2 block text-sm font-semibold text-slate-200"
@@ -85,7 +85,7 @@ export default function NewsTestPage() {
               id="query"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              className="flex-1 rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
               placeholder="semiconductor AI HBM"
             />
 
@@ -93,7 +93,7 @@ export default function NewsTestPage() {
               type="button"
               onClick={searchNews}
               disabled={loading}
-              className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Searching..." : "Search News"}
             </button>
@@ -124,7 +124,7 @@ export default function NewsTestPage() {
           {articles.map((article) => (
             <article
               key={article.url}
-              className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg"
+              className="overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-lg"
             >
               {article.image && (
                 <img
@@ -136,7 +136,7 @@ export default function NewsTestPage() {
 
               <div className="p-6">
                 <div className="mb-4 flex items-center justify-between gap-4">
-                  <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                  <span className="rounded-full bg-[#F47725]/20 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                     Real News
                   </span>
 
@@ -153,7 +153,7 @@ export default function NewsTestPage() {
                   {article.description}
                 </p>
 
-                <div className="flex items-center justify-between border-t border-slate-800 pt-4 text-sm">
+                <div className="flex items-center justify-between border-t border-[#454550] pt-4 text-sm">
                   <div className="text-slate-400">
                     <p>{article.source?.name}</p>
                   </div>
@@ -162,7 +162,7 @@ export default function NewsTestPage() {
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-400"
+                    className="rounded-lg bg-[#F47725] px-4 py-2 font-semibold text-white hover:bg-[#ff8a3d]"
                   >
                     Original
                   </a>

@@ -11,6 +11,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,16 +20,12 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
-      if (!email.trim()) {
-        throw new Error("Please enter your email.");
-      }
-
-      if (!password.trim()) {
-        throw new Error("Please enter your password.");
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Please enter your email and password.");
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -47,67 +44,86 @@ export default function LoginPage() {
     }
   }
 
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      handleLogin();
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-md px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="mb-6 rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 shadow-xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-100">
-            User Login
-          </p>
-          <h1 className="text-3xl font-bold">Log in to your account</h1>
-          <p className="mt-3 text-sm text-blue-50">
-            Manage your daily news subscription and topic preferences.
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
+
+          <div className="p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              Account Login
+            </p>
+
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Welcome Back
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-zinc-300">
+              Log in to manage your news topics, language preference, and daily
+              email subscription.
+            </p>
+          </div>
         </div>
 
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+          <div className="mb-6 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
             <h2 className="font-semibold">Login Error</h2>
             <p className="mt-2 text-sm">{errorMessage}</p>
           </div>
         )}
 
-        <form className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+        <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 shadow-sm">
           <div className="mb-5">
             <label
               htmlFor="email"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Email Address
             </label>
+
             <input
               id="email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="your.email@company.com"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              onKeyDown={handleKeyDown}
+              placeholder="you@example.com"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-[#F47725]"
             />
           </div>
 
           <div className="mb-6">
             <label
               htmlFor="password"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Password
             </label>
+
             <input
               id="password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Enter your password"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-[#F47725]"
             />
           </div>
 
@@ -115,18 +131,21 @@ export default function LoginPage() {
             type="button"
             onClick={handleLogin}
             disabled={loading}
-            className="w-full rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Logging In..." : "Log In"}
+            {loading ? "Logging in..." : "Login"}
           </button>
 
-          <p className="mt-5 text-center text-sm text-slate-400">
-            No account yet?{" "}
-            <Link href="/signup" className="text-blue-300 hover:text-blue-200">
-              Create account
+          <p className="mt-6 text-center text-sm text-zinc-400">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="font-semibold text-[#ffb17a] hover:text-[#F47725]"
+            >
+              Create one
             </Link>
           </p>
-        </form>
+        </div>
       </section>
     </main>
   );

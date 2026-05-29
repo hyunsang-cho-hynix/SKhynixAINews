@@ -50,7 +50,7 @@ function UnsubscribeContent() {
 
   return (
     <section className="mx-auto max-w-xl px-6 py-10">
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+      <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8">
         <h1 className="text-3xl font-bold">Unsubscribe</h1>
 
         <p className="mt-3 text-slate-400">
@@ -63,7 +63,7 @@ function UnsubscribeContent() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="your.email@company.com"
-          className="mt-6 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+          className="mt-6 w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
         />
 
         <button
@@ -89,7 +89,7 @@ function UnsubscribeContent() {
 
         <Link
           href="/"
-          className="mt-6 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mt-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
@@ -100,13 +100,13 @@ function UnsubscribeContent() {
 
 export default function UnsubscribePage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <Suspense
         fallback={
           <section className="mx-auto max-w-xl px-6 py-10">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
+            <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8">
               <p className="text-slate-400">Loading unsubscribe page...</p>
             </div>
           </section>

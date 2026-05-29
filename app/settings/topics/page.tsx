@@ -229,10 +229,10 @@ export default function TopicSettingsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="min-h-screen bg-[#26262C] text-white">
         <Navbar />
         <section className="mx-auto max-w-4xl px-6 py-10">
-          <p className="text-slate-400">Loading topic preferences...</p>
+          <p className="text-zinc-300">Loading topic preferences...</p>
         </section>
       </main>
     );
@@ -240,27 +240,28 @@ export default function TopicSettingsPage() {
 
   if (!userId) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="min-h-screen bg-[#26262C] text-white">
         <Navbar />
 
         <section className="mx-auto max-w-3xl px-6 py-10">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center shadow-sm">
             <h1 className="text-3xl font-bold text-white">Login Required</h1>
-            <p className="mt-3 text-slate-400">
+
+            <p className="mt-3 text-zinc-300">
               Please log in to manage your daily news topic preferences.
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/login"
-                className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400"
+                className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
               >
                 Go to Login
               </Link>
 
               <Link
                 href="/signup"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-5 py-3 font-semibold text-slate-200 hover:bg-slate-800"
+                className="rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 font-semibold text-zinc-200 hover:bg-[#383843]"
               >
                 Create Account
               </Link>
@@ -273,27 +274,33 @@ export default function TopicSettingsPage() {
 
   if (!preference || !preference.is_subscribed) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="min-h-screen bg-[#26262C] text-white">
         <Navbar />
 
         <section className="mx-auto max-w-3xl px-6 py-10">
-          <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 text-white shadow-sm">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-100">
-              My Topics
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight">
-              You are not subscribed yet
-            </h1>
-            <p className="mt-3 max-w-2xl text-blue-50">
-              Create your daily news subscription first. After subscribing, you
-              can return here to update your topic preferences.
-            </p>
+          <div className="overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+            <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
+
+            <div className="p-8">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+                My Topics
+              </p>
+
+              <h1 className="text-4xl font-bold tracking-tight text-white">
+                You are not subscribed yet
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-zinc-300">
+                Create your daily news subscription first. After subscribing,
+                you can return here to update your topic preferences.
+              </p>
+            </div>
           </div>
 
           {unsubscribed && (
-            <div className="mt-8 rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-green-200">
+            <div className="mt-8 rounded-2xl border border-[#F47725]/30 bg-[#F47725]/10 p-5 text-orange-100">
               <h2 className="font-semibold">Unsubscribed successfully</h2>
-              <p className="mt-2 text-sm text-green-100/80">
+              <p className="mt-2 text-sm text-orange-100/80">
                 You will no longer receive the daily news brief unless you
                 subscribe again.
               </p>
@@ -301,21 +308,21 @@ export default function TopicSettingsPage() {
           )}
 
           {errorMessage && (
-            <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+            <div className="mt-8 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
               <h2 className="font-semibold">Error</h2>
               <p className="mt-2 text-sm">{errorMessage}</p>
             </div>
           )}
 
-          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center shadow-sm">
-            <p className="text-slate-400">
+          <div className="mt-8 rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center shadow-sm">
+            <p className="text-zinc-300">
               Logged in as{" "}
               <span className="font-semibold text-white">{userEmail}</span>
             </p>
 
             <Link
               href="/subscribe"
-              className="mt-6 inline-block rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400"
+              className="mt-6 inline-block rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
             >
               Subscribe to Daily Brief
             </Link>
@@ -326,35 +333,41 @@ export default function TopicSettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-6 py-8">
         <Link
           href="/"
-          className="mb-6 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-6 text-white shadow-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-100">
-            My Topics
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Manage Daily News Topics
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50">
-            Choose your news language, time zone, and optional topics for the
-            daily news brief.
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
+
+          <div className="p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              My Topics
+            </p>
+
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Manage Daily News Topics
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
+              Choose your news language, time zone, and optional topics for the
+              daily news brief.
+            </p>
+          </div>
         </div>
 
-        <div className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-sm md:flex-row md:items-center">
+        <div className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-[#454550] bg-[#303039] p-5 shadow-sm md:flex-row md:items-center">
           <div>
-            <p className="text-sm text-slate-400">Subscribed Email</p>
+            <p className="text-sm text-zinc-400">Subscribed Email</p>
             <p className="mt-1 font-semibold text-white">{userEmail}</p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               Changes to language, time zone, and topics are saved together.
             </p>
           </div>
@@ -366,8 +379,8 @@ export default function TopicSettingsPage() {
               disabled={saving || !hasUnsavedChanges}
               className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
                 hasUnsavedChanges
-                  ? "bg-blue-500 text-white hover:bg-blue-400"
-                  : "border border-slate-700 bg-slate-950 text-slate-400"
+                  ? "bg-[#F47725] text-white hover:bg-[#ff8a3d]"
+                  : "border border-[#454550] bg-[#26262C] text-zinc-400"
               }`}
             >
               {saving ? "Saving..." : hasUnsavedChanges ? "Save Changes" : "Saved"}
@@ -377,7 +390,7 @@ export default function TopicSettingsPage() {
               type="button"
               onClick={handleUnsubscribe}
               disabled={unsubscribing}
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-[#EA002C]/30 bg-[#EA002C]/10 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-[#EA002C]/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
             </button>
@@ -385,9 +398,9 @@ export default function TopicSettingsPage() {
         </div>
 
         {saved && (
-          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-5 text-green-200">
+          <div className="mb-6 rounded-2xl border border-[#F47725]/30 bg-[#F47725]/10 p-5 text-orange-100">
             <h2 className="font-semibold">Settings saved</h2>
-            <p className="mt-2 text-sm text-green-100/80">
+            <p className="mt-2 text-sm text-orange-100/80">
               Your language, time zone, and topic preferences were saved
               successfully.
             </p>
@@ -395,17 +408,17 @@ export default function TopicSettingsPage() {
         )}
 
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+          <div className="mb-6 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
             <h2 className="font-semibold">Error</h2>
             <p className="mt-2 text-sm">{errorMessage}</p>
           </div>
         )}
 
         <div className="mb-6 grid gap-5 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5 shadow-sm">
             <label
               htmlFor="newsLanguagePreference"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               News Language
             </label>
@@ -414,7 +427,7 @@ export default function TopicSettingsPage() {
               id="newsLanguagePreference"
               value={newsLanguagePreference}
               onChange={(event) => handleLanguageChange(event.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-400"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none focus:border-[#F47725]"
             >
               {languageOptions.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -423,15 +436,15 @@ export default function TopicSettingsPage() {
               ))}
             </select>
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               This controls the language used in your daily email brief.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5 shadow-sm">
             <label
               htmlFor="timezone"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Time Zone
             </label>
@@ -440,7 +453,7 @@ export default function TopicSettingsPage() {
               id="timezone"
               value={timezone}
               onChange={(event) => handleTimezoneChange(event.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-400"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none focus:border-[#F47725]"
             >
               {timezones.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -449,18 +462,19 @@ export default function TopicSettingsPage() {
               ))}
             </select>
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               The system will use this time zone for scheduled delivery.
             </p>
           </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-sm">
+          <section className="rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
             <h2 className="mb-3 text-xl font-semibold text-white">
               Mandatory Topics
             </h2>
-            <p className="mb-5 text-sm text-slate-400">
+
+            <p className="mb-5 text-sm text-zinc-400">
               These are included for every subscriber.
             </p>
 
@@ -468,10 +482,11 @@ export default function TopicSettingsPage() {
               {mandatoryTopics.map((topic) => (
                 <div
                   key={topic}
-                  className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-4"
+                  className="flex items-center justify-between rounded-xl border border-[#454550] bg-[#26262C] p-4"
                 >
                   <span className="font-medium text-white">{topic}</span>
-                  <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+
+                  <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                     Required
                   </span>
                 </div>
@@ -479,11 +494,12 @@ export default function TopicSettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-sm">
+          <section className="rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
             <h2 className="mb-3 text-xl font-semibold text-white">
               Optional Topics
             </h2>
-            <p className="mb-5 text-sm text-slate-400">
+
+            <p className="mb-5 text-sm text-zinc-400">
               Turn these on or off, then click Save Changes above.
             </p>
 
@@ -498,16 +514,17 @@ export default function TopicSettingsPage() {
                     onClick={() => toggleTopic(topic)}
                     className={`flex w-full items-center justify-between rounded-xl border p-4 text-left transition ${
                       isSelected
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-slate-800 bg-slate-950 hover:border-slate-600"
+                        ? "border-[#F47725] bg-[#F47725]/10"
+                        : "border-[#454550] bg-[#26262C] hover:border-[#F47725]"
                     }`}
                   >
                     <span className="font-medium text-white">{topic}</span>
+
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         isSelected
-                          ? "bg-blue-500/20 text-blue-300"
-                          : "bg-slate-800 text-slate-400"
+                          ? "border border-[#F47725]/30 bg-[#F47725]/10 text-[#ffb17a]"
+                          : "border border-[#454550] bg-[#303039] text-zinc-400"
                       }`}
                     >
                       {isSelected ? "On" : "Off"}

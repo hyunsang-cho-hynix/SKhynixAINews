@@ -190,13 +190,13 @@ export default function Home() {
       : "Ranked by AI processing status and importance score";
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-7xl px-6 py-6">
-        <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-800 pb-4 md:flex-row md:items-end">
+        <div className="mb-5 flex flex-col justify-between gap-3 border-b border-[#3B3B46] pb-4 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-semibold text-slate-400">{today}</p>
+            <p className="text-sm font-semibold text-zinc-400">{today}</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">
               {pageTitle}
             </h1>
@@ -205,29 +205,33 @@ export default function Home() {
           {!isSubscribed && (
             <Link
               href="/subscribe"
-              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200"
+              className="rounded-lg bg-[#F47725] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff8a3d]"
             >
               Subscribe
             </Link>
           )}
         </div>
 
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-5 text-white shadow-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-100">
-            SK hynix AI News
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F47725]" />
 
-          <h2 className="max-w-4xl text-2xl font-bold tracking-tight md:text-3xl">
-            {newsLanguagePreference === "ko"
-              ? "반도체, AI 및 기술 뉴스 브리프"
-              : "Semiconductor, AI, and Technology News Brief"}
-          </h2>
+          <div className="px-6 py-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              SK hynix AI News
+            </p>
 
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-blue-50 md:text-base">
-            {newsLanguagePreference === "ko"
-              ? "공개 기술 뉴스를 토픽별로 정리하고, 주요 기사는 AI가 요약하여 데일리 이메일 브리핑으로 제공합니다."
-              : "Public technology news organized by topic. Key articles are AI-processed and prepared for daily email briefings."}
-          </p>
+            <h2 className="max-w-4xl text-2xl font-bold tracking-tight text-white md:text-3xl">
+              {newsLanguagePreference === "ko"
+                ? "반도체, AI 및 기술 뉴스 브리프"
+                : "Semiconductor, AI, and Technology News Brief"}
+            </h2>
+
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300 md:text-base">
+              {newsLanguagePreference === "ko"
+                ? "공개 기술 뉴스를 토픽별로 정리하고, 주요 기사는 AI가 요약하여 데일리 이메일 브리핑으로 제공합니다."
+                : "Public technology news organized by topic. Key articles are AI-processed and prepared for daily email briefings."}
+            </p>
+          </div>
         </div>
 
         <div className="mb-5 flex flex-wrap gap-2">
@@ -238,8 +242,8 @@ export default function Home() {
               onClick={() => setSelectedTopic(topic)}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                 selectedTopic === topic
-                  ? "border-blue-500 bg-blue-500 text-white"
-                  : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                  ? "border-[#F47725] bg-[#F47725] text-white"
+                  : "border-[#454550] bg-[#303039] text-zinc-300 hover:border-[#F47725]/70 hover:bg-[#383843]"
               }`}
             >
               {topic}
@@ -249,12 +253,12 @@ export default function Home() {
 
         <div className="mb-4">
           <h2 className="text-xl font-bold text-white">{sectionTitle}</h2>
-          <p className="text-sm text-slate-400">{sectionDescription}</p>
+          <p className="text-sm text-zinc-400">{sectionDescription}</p>
         </div>
 
         {loading && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center">
-            <p className="text-slate-400">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
+            <p className="text-zinc-300">
               {newsLanguagePreference === "ko"
                 ? "AI가 선별한 기사를 불러오는 중..."
                 : "Loading AI-curated articles..."}
@@ -263,7 +267,7 @@ export default function Home() {
         )}
 
         {errorMessage && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-red-200">
+          <div className="rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-8 text-red-200">
             <h2 className="text-xl font-semibold">
               {newsLanguagePreference === "ko"
                 ? "기사를 불러오지 못했습니다"
@@ -274,13 +278,13 @@ export default function Home() {
         )}
 
         {!loading && !errorMessage && topArticles.length === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center">
+          <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
             <h2 className="text-2xl font-semibold text-white">
               {newsLanguagePreference === "ko"
                 ? "아직 처리된 기사가 없습니다"
                 : "No processed articles yet"}
             </h2>
-            <p className="mt-3 text-slate-400">
+            <p className="mt-3 text-zinc-300">
               {newsLanguagePreference === "ko"
                 ? "이 토픽에 저장된 기사가 아직 없습니다. 다른 토픽을 선택하거나 Search News + AI를 사용해보세요."
                 : "No saved articles are available for this topic yet. Try another topic or use Search News + AI to analyze real news."}
@@ -289,7 +293,7 @@ export default function Home() {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/news-ai"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-5 py-3 font-semibold text-slate-200 hover:bg-slate-800"
+                className="rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 font-semibold text-zinc-200 hover:bg-[#383843]"
               >
                 Search News + AI
               </Link>
@@ -306,27 +310,27 @@ export default function Home() {
                 <Link
                   key={article.id}
                   href={`/brief-article/${article.id}`}
-                  className="group block overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-slate-800 hover:shadow-lg"
+                  className="group block overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843] hover:shadow-lg"
                 >
                   {article.image_url && (
                     <img
                       src={article.image_url}
                       alt=""
-                      className="h-40 w-full object-cover"
+                      className="h-40 w-full object-cover opacity-90 transition group-hover:opacity-100"
                     />
                   )}
 
                   <div className="p-5">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                      <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                         {article.topic}
                       </span>
 
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
                           article.is_ai_processed
-                            ? "bg-green-500/20 text-green-300"
-                            : "bg-slate-800 text-slate-400"
+                            ? "border border-green-500/30 bg-green-500/10 text-green-300"
+                            : "border border-[#454550] bg-[#26262C] text-zinc-400"
                         }`}
                       >
                         {article.is_ai_processed ? "AI Processed" : "Collected"}
@@ -334,52 +338,52 @@ export default function Home() {
                     </div>
 
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-zinc-400">
                         Score {article.importance_score}/10
                       </span>
                     </div>
 
-                    <h3 className="mb-3 line-clamp-2 text-lg font-bold leading-snug text-white group-hover:text-blue-300">
+                    <h3 className="mb-3 line-clamp-2 text-lg font-bold leading-snug text-white group-hover:text-[#ffb17a]">
                       {display.title}
                     </h3>
 
-                    <p className="mb-4 line-clamp-3 text-sm leading-6 text-slate-300">
+                    <p className="mb-4 line-clamp-3 text-sm leading-6 text-zinc-300">
                       {display.summary}
                     </p>
 
                     {newsLanguagePreference === "both" &&
                       display.showKoreanBlock && (
-                        <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950 p-3">
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <div className="mb-4 rounded-xl border border-[#454550] bg-[#26262C] p-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                             Korean
                           </p>
 
                           {display.koreanTitle && (
-                            <p className="mb-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-100">
+                            <p className="mb-2 line-clamp-2 text-sm font-semibold leading-6 text-zinc-100">
                               {display.koreanTitle}
                             </p>
                           )}
 
                           {display.koreanSummary && (
-                            <p className="line-clamp-2 text-sm leading-6 text-slate-300">
+                            <p className="line-clamp-2 text-sm leading-6 text-zinc-300">
                               {display.koreanSummary}
                             </p>
                           )}
                         </div>
                       )}
 
-                    <div className="mb-4 rounded-xl bg-slate-950 p-3">
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="mb-4 rounded-xl bg-[#26262C] p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         {newsLanguagePreference === "ko"
                           ? "중요 포인트"
                           : "Why this matters"}
                       </p>
-                      <p className="line-clamp-2 text-sm leading-6 text-slate-300">
+                      <p className="line-clamp-2 text-sm leading-6 text-zinc-300">
                         {display.reason}
                       </p>
                     </div>
 
-                    <div className="border-t border-slate-800 pt-4 text-sm text-slate-400">
+                    <div className="border-t border-[#454550] pt-4 text-sm text-zinc-400">
                       <p className="truncate">{article.source}</p>
                       <p>
                         {new Date(article.published_at).toLocaleDateString(

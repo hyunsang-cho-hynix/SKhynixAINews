@@ -157,10 +157,10 @@ export default function SubscribePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="min-h-screen bg-[#26262C] text-white">
         <Navbar />
         <section className="mx-auto max-w-3xl px-6 py-10">
-          <p className="text-slate-400">Loading subscription page...</p>
+          <p className="text-zinc-300">Loading subscription page...</p>
         </section>
       </main>
     );
@@ -168,29 +168,33 @@ export default function SubscribePage() {
 
   if (!userId) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="min-h-screen bg-[#26262C] text-white">
         <Navbar />
 
         <section className="mx-auto max-w-3xl px-6 py-10">
-          <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-8 text-white shadow-sm">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-100">
-              Newsletter Subscription
-            </p>
+          <div className="overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+            <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
 
-            <h1 className="mb-4 text-4xl font-bold tracking-tight">
-              Subscribe to Daily AI News Brief
-            </h1>
+            <div className="p-8">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+                Newsletter Subscription
+              </p>
 
-            <p className="text-blue-50">
-              Log in or create an account to subscribe and manage your daily
-              news topics.
-            </p>
+              <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">
+                Subscribe to Daily AI News Brief
+              </h1>
+
+              <p className="text-zinc-300">
+                Log in or create an account to subscribe and manage your daily
+                news topics.
+              </p>
+            </div>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-yellow-100 shadow-sm">
+          <div className="mt-8 rounded-2xl border border-[#F47725]/30 bg-[#F47725]/10 p-8 text-orange-100 shadow-sm">
             <h2 className="text-2xl font-semibold">Login required</h2>
 
-            <p className="mt-3 text-yellow-100/80">
+            <p className="mt-3 text-orange-100/80">
               Please log in or create an account first. After login, you can
               subscribe to the daily email brief and select your topics.
             </p>
@@ -198,14 +202,14 @@ export default function SubscribePage() {
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/login"
-                className="rounded-xl bg-white px-5 py-3 font-semibold text-slate-950 hover:bg-slate-200"
+                className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
               >
                 Login
               </Link>
 
               <Link
                 href="/signup"
-                className="rounded-xl border border-yellow-400/40 px-5 py-3 font-semibold text-yellow-100 hover:bg-yellow-500/10"
+                className="rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 font-semibold text-zinc-100 hover:bg-[#383843]"
               >
                 Create Account
               </Link>
@@ -217,13 +221,13 @@ export default function SubscribePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       {submitted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center text-slate-950 shadow-2xl">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-[#454550] bg-[#303039] p-8 text-center text-white shadow-2xl">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#F47725]/15 text-[#ffb17a]">
               <svg
                 viewBox="0 0 24 24"
                 className="h-7 w-7"
@@ -240,23 +244,23 @@ export default function SubscribePage() {
 
             <h2 className="text-2xl font-bold">Subscription Saved</h2>
 
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-zinc-300">
               Your daily news brief subscription has been saved successfully.
             </p>
 
-            <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-left text-sm text-slate-600">
+            <div className="mt-5 rounded-2xl bg-[#26262C] p-4 text-left text-sm text-zinc-300">
               <p>
-                <span className="font-semibold text-slate-900">Email:</span>{" "}
+                <span className="font-semibold text-white">Email:</span>{" "}
                 {email}
               </p>
 
               <p className="mt-1">
-                <span className="font-semibold text-slate-900">Language:</span>{" "}
+                <span className="font-semibold text-white">Language:</span>{" "}
                 {selectedLanguageLabel}
               </p>
 
               <p className="mt-1">
-                <span className="font-semibold text-slate-900">Topics:</span>{" "}
+                <span className="font-semibold text-white">Topics:</span>{" "}
                 Mandatory topics
                 {selectedTopics.length > 0
                   ? ` plus ${selectedTopics.join(", ")}`
@@ -264,9 +268,7 @@ export default function SubscribePage() {
               </p>
 
               <p className="mt-1">
-                <span className="font-semibold text-slate-900">
-                  Time Zone:
-                </span>{" "}
+                <span className="font-semibold text-white">Time Zone:</span>{" "}
                 {timezone}
               </p>
             </div>
@@ -275,7 +277,7 @@ export default function SubscribePage() {
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className="flex-1 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500"
+                className="flex-1 rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
               >
                 Go to Home
               </button>
@@ -283,7 +285,7 @@ export default function SubscribePage() {
               <button
                 type="button"
                 onClick={() => setSubmitted(false)}
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                className="flex-1 rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 font-semibold text-zinc-200 hover:bg-[#383843]"
               >
                 Continue Editing
               </button>
@@ -295,38 +297,42 @@ export default function SubscribePage() {
       <section className="mx-auto max-w-3xl px-6 py-8">
         <Link
           href="/"
-          className="mb-6 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-6 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-6 text-white shadow-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-100">
-            Newsletter Subscription
-          </p>
+        <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F8A23A]" />
 
-          <h1 className="text-3xl font-bold tracking-tight">
-            Subscribe to Daily AI News Brief
-          </h1>
+          <div className="p-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
+              Newsletter Subscription
+            </p>
 
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50">
-            Get a curated daily email covering semiconductor, AI, automation,
-            robotics, IT, and selected technology topics.
-          </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Subscribe to Daily AI News Brief
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
+              Get a curated daily email covering semiconductor, AI, automation,
+              robotics, IT, and selected technology topics.
+            </p>
+          </div>
         </div>
 
         {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">
+          <div className="mb-6 rounded-2xl border border-[#EA002C]/30 bg-[#EA002C]/10 p-5 text-red-200">
             <h2 className="font-semibold">Subscription Error</h2>
             <p className="mt-2 text-sm">{errorMessage}</p>
           </div>
         )}
 
-        <form className="rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-sm">
+        <form className="rounded-2xl border border-[#454550] bg-[#303039] p-8 shadow-sm">
           <div className="mb-8">
             <label
               htmlFor="email"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Email Address
             </label>
@@ -336,10 +342,10 @@ export default function SubscribePage() {
               type="email"
               value={email}
               readOnly
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none"
             />
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               This email comes from your logged-in account.
             </p>
           </div>
@@ -347,7 +353,7 @@ export default function SubscribePage() {
           <div className="mb-8">
             <label
               htmlFor="newsLanguagePreference"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               News Language
             </label>
@@ -359,7 +365,7 @@ export default function SubscribePage() {
                 setSubmitted(false);
                 setNewsLanguagePreference(event.target.value);
               }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-400"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none focus:border-[#F47725]"
             >
               {languageOptions.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -368,7 +374,7 @@ export default function SubscribePage() {
               ))}
             </select>
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               This controls the language used in your daily email brief.
             </p>
           </div>
@@ -376,7 +382,7 @@ export default function SubscribePage() {
           <div className="mb-8">
             <label
               htmlFor="timezone"
-              className="mb-2 block text-sm font-semibold text-slate-200"
+              className="mb-2 block text-sm font-semibold text-zinc-200"
             >
               Time Zone
             </label>
@@ -388,7 +394,7 @@ export default function SubscribePage() {
                 setSubmitted(false);
                 setTimezone(event.target.value);
               }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-400"
+              className="w-full rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none focus:border-[#F47725]"
             >
               {timezones.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -397,16 +403,18 @@ export default function SubscribePage() {
               ))}
             </select>
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-400">
               Daily email delivery is targeted around 8:00 AM in your selected
               time zone.
             </p>
           </div>
 
           <div className="mb-8">
-            <h2 className="mb-3 text-lg font-semibold">Mandatory Topics</h2>
+            <h2 className="mb-3 text-lg font-semibold text-white">
+              Mandatory Topics
+            </h2>
 
-            <p className="mb-4 text-sm text-slate-400">
+            <p className="mb-4 text-sm text-zinc-400">
               These topics are included in every daily brief.
             </p>
 
@@ -414,11 +422,11 @@ export default function SubscribePage() {
               {mandatoryTopics.map((topic) => (
                 <div
                   key={topic}
-                  className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-4"
+                  className="flex items-center justify-between rounded-xl border border-[#454550] bg-[#26262C] p-4"
                 >
                   <span className="font-medium text-white">{topic}</span>
 
-                  <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                  <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                     Required
                   </span>
                 </div>
@@ -427,9 +435,11 @@ export default function SubscribePage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="mb-3 text-lg font-semibold">Optional Topics</h2>
+            <h2 className="mb-3 text-lg font-semibold text-white">
+              Optional Topics
+            </h2>
 
-            <p className="mb-4 text-sm text-slate-400">
+            <p className="mb-4 text-sm text-zinc-400">
               Choose additional topics for your daily email.
             </p>
 
@@ -437,13 +447,13 @@ export default function SubscribePage() {
               {optionalTopics.map((topic) => (
                 <label
                   key={topic}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 hover:border-blue-400"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#454550] bg-[#26262C] p-4 hover:border-[#F47725]"
                 >
                   <input
                     type="checkbox"
                     checked={selectedTopics.includes(topic)}
                     onChange={() => toggleTopic(topic)}
-                    className="h-4 w-4 rounded border-slate-700"
+                    className="h-4 w-4 rounded border-[#454550]"
                   />
 
                   <span>{topic}</span>
@@ -456,12 +466,12 @@ export default function SubscribePage() {
             type="button"
             onClick={handleSubscribe}
             disabled={saving}
-            className="w-full rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving Subscription..." : "Subscribe to Daily Brief"}
           </button>
 
-          <p className="mt-4 text-center text-xs text-slate-500">
+          <p className="mt-4 text-center text-xs text-zinc-400">
             The daily delivery schedule is managed by the system administrator.
           </p>
         </form>

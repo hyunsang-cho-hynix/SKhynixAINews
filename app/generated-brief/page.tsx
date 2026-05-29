@@ -52,13 +52,13 @@ export default function GeneratedBriefPage() {
   );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-4xl px-6 py-10">
         <Link
           href="/news-ai"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to News + AI
         </Link>
@@ -76,7 +76,7 @@ export default function GeneratedBriefPage() {
           </p>
         </div>
 
-        <div className="mb-8 flex flex-col justify-between gap-4 rounded-3xl border border-slate-800 bg-slate-900 p-6 md:flex-row md:items-center">
+        <div className="mb-8 flex flex-col justify-between gap-4 rounded-3xl border border-[#454550] bg-[#303039] p-6 md:flex-row md:items-center">
           <div>
             <h2 className="text-xl font-semibold">
               {articles.length} Saved Articles
@@ -89,14 +89,14 @@ export default function GeneratedBriefPage() {
           <div className="flex flex-wrap gap-3">
             <Link
                 href="/generated-email"
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200"
+                className="rounded-xl bg-[#303039] px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200"
             >
                 View Email Preview
             </Link>
 
             <Link
                 href="/news-ai"
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800"
             >
                 Add More Articles
             </Link>
@@ -112,7 +112,7 @@ export default function GeneratedBriefPage() {
         </div>
 
         {articles.length === 0 && (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
+          <div className="rounded-3xl border border-[#454550] bg-[#303039] p-8 text-center">
             <h2 className="text-2xl font-semibold">No articles saved yet</h2>
             <p className="mt-3 text-slate-400">
               Go to News + AI, search real news, process an article with Gemini,
@@ -121,7 +121,7 @@ export default function GeneratedBriefPage() {
 
             <Link
               href="/news-ai"
-              className="mt-6 inline-block rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400"
+              className="mt-6 inline-block rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
             >
               Go to News + AI
             </Link>
@@ -131,7 +131,7 @@ export default function GeneratedBriefPage() {
         <div className="space-y-10">
           {Object.entries(groupedArticles).map(([topic, topicArticles]) => (
             <section key={topic}>
-              <div className="mb-4 border-b border-slate-800 pb-3">
+              <div className="mb-4 border-b border-[#454550] pb-3">
                 <h2 className="text-2xl font-bold">{topic}</h2>
                 <p className="mt-1 text-sm text-slate-400">
                   {topicArticles.length} article
@@ -143,7 +143,7 @@ export default function GeneratedBriefPage() {
                 {topicArticles.map((article) => (
                   <article
                     key={article.originalUrl}
-                    className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-lg"
+                    className="overflow-hidden rounded-3xl border border-[#454550] bg-[#303039] shadow-lg"
                   >
                     {article.image && (
                       <img
@@ -155,7 +155,7 @@ export default function GeneratedBriefPage() {
 
                     <div className="p-6">
                       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+                        <span className="rounded-full bg-[#F47725]/20 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
                           {article.topic}
                         </span>
 
@@ -172,7 +172,7 @@ export default function GeneratedBriefPage() {
                         {article.summary}
                       </p>
 
-                      <div className="mb-5 rounded-2xl bg-slate-950 p-5">
+                      <div className="mb-5 rounded-2xl bg-[#26262C] p-5">
                         <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
                           Why This Matters
                         </p>
@@ -181,7 +181,7 @@ export default function GeneratedBriefPage() {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-800 pt-5 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#454550] pt-5 text-sm">
                         <div className="text-slate-400">
                           <p>Source: {article.source}</p>
                           <p>
@@ -194,7 +194,7 @@ export default function GeneratedBriefPage() {
                           href={article.originalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-xl bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-400"
+                          className="rounded-xl bg-[#F47725] px-4 py-2 font-semibold text-white hover:bg-[#ff8a3d]"
                         >
                           Original Article
                         </a>

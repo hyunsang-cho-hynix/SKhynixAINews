@@ -19,20 +19,20 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
-        <article className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+        <article className="rounded-3xl border border-[#454550] bg-[#303039] p-8 shadow-xl">
           <div className="mb-5 flex items-center justify-between">
-            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300">
+            <span className="rounded-full bg-[#F47725]/20 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
               {article.topic}
             </span>
 
@@ -50,12 +50,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <p>Published: {article.publishedAt}</p>
           </div>
 
-          <section className="mb-8 rounded-2xl bg-slate-950 p-5">
+          <section className="mb-8 rounded-2xl bg-[#26262C] p-5">
             <h2 className="mb-3 text-lg font-semibold">AI Summary</h2>
             <p className="leading-7 text-slate-300">{article.summary}</p>
           </section>
 
-          <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+          <div className="mb-8 rounded-2xl border border-[#454550] bg-[#26262C] p-5">
             <h2 className="mb-3 text-lg font-semibold">Why This Matters</h2>
             <p className="leading-7 text-slate-300">
               This article is included in the daily brief because it is relevant
@@ -68,7 +68,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             href={article.originalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400"
+            className="inline-flex rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
           >
             Open Original Article
           </a>

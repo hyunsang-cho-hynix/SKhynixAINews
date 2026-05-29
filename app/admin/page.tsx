@@ -99,19 +99,19 @@ export default function AdminPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         <Link
           href="/"
-          className="mb-8 inline-block text-sm text-blue-300 hover:text-blue-200"
+          className="mb-8 inline-block text-sm text-[#ffb17a] hover:text-[#F47725]"
         >
           ← Back to Home
         </Link>
 
         <div className="mb-10 rounded-3xl bg-gradient-to-r from-slate-800 to-slate-700 p-8 shadow-xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-300">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#ffb17a]">
             Admin Console
           </p>
 
@@ -126,9 +126,9 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <div className="mb-8 rounded-3xl border border-blue-500/30 bg-blue-500/10 p-6">
+        <div className="mb-8 rounded-3xl border border-blue-500/30 bg-[#F47725]/10 p-6">
           <div className="mb-6">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-300">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#ffb17a]">
               Manual Job Runner
             </p>
 
@@ -150,14 +150,14 @@ export default function AdminPage() {
               value={cronSecret}
               onChange={(event) => setCronSecret(event.target.value)}
               placeholder="Enter CRON_SECRET"
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
             />
 
             <button
               type="button"
               onClick={runDailyBriefJob}
               disabled={loading}
-              className="rounded-xl bg-blue-500 px-5 py-3 font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Running Job..." : "Run Daily Brief Job"}
             </button>
@@ -205,7 +205,7 @@ export default function AdminPage() {
             </div>
 
             <div className="mb-6 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-green-500/20 bg-slate-950/60 p-5">
+              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
                 <p className="text-sm text-green-100/60">
                   Subscribers Checked
                 </p>
@@ -214,14 +214,14 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-green-500/20 bg-slate-950/60 p-5">
+              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
                 <p className="text-sm text-green-100/60">Successful Sends</p>
                 <p className="mt-2 text-3xl font-bold text-green-50">
                   {jobResult.successfulSends ?? 0}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-green-500/20 bg-slate-950/60 p-5">
+              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
                 <p className="text-sm text-green-100/60">Failed Sends</p>
                 <p className="mt-2 text-3xl font-bold text-green-50">
                   {jobResult.failedSends ?? 0}
@@ -232,7 +232,7 @@ export default function AdminPage() {
             {jobResult.results && jobResult.results.length > 0 && (
               <div className="overflow-x-auto rounded-2xl border border-green-500/20">
                 <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                  <thead className="bg-slate-950/80 text-green-100/70">
+                  <thead className="bg-[#26262C]/80 text-green-100/70">
                     <tr>
                       <th className="px-4 py-3 font-medium">Email</th>
                       <th className="px-4 py-3 font-medium">Status</th>
@@ -308,7 +308,7 @@ export default function AdminPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-lg transition hover:border-blue-500 hover:bg-slate-800"
+              className="rounded-3xl border border-[#454550] bg-[#303039] p-6 shadow-lg transition hover:border-blue-500 hover:bg-slate-800"
             >
               <h3 className="mb-2 text-xl font-semibold">{item.title}</h3>
               <p className="text-sm leading-6 text-slate-400">
