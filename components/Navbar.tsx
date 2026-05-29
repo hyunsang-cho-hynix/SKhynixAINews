@@ -54,7 +54,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="border-b border-[#3a302b] bg-[#171412]/95 text-white backdrop-blur">
+    <header className="border-b border-[#3B3B46] bg-[#26262C]/95 text-white backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link href="/" className="text-base font-bold tracking-tight">
           SK hynix AI News
@@ -63,7 +63,7 @@ export default function Navbar() {
         <nav className="flex items-center gap-2 text-sm">
           <Link
             href="/news-ai"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#241f1b] hover:text-white"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
           >
             <svg
               viewBox="0 0 24 24"
@@ -81,10 +81,30 @@ export default function Navbar() {
             Search News + AI
           </Link>
 
+          <Link
+            href="/stock"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4 text-[#F47725]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 3v18h18" />
+              <path d="m7 14 4-4 3 3 5-6" />
+            </svg>
+            Stock
+          </Link>
+
           {!isSubscribed && (
             <Link
               href="/subscribe"
-              className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#241f1b] hover:text-white"
+              className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
             >
               Subscribe
             </Link>
@@ -94,7 +114,7 @@ export default function Navbar() {
             <>
               <Link
                 href="/settings/topics"
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#241f1b] hover:text-white"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -115,7 +135,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-lg border border-[#4a3d36] px-3 py-2 text-zinc-300 hover:bg-[#241f1b] hover:text-white"
+                className="rounded-lg border border-[#454550] px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
               >
                 Logout
               </button>
@@ -123,7 +143,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#241f1b] hover:text-white"
+              className="rounded-lg px-3 py-2 text-zinc-300 hover:bg-[#303039] hover:text-white"
             >
               Login
             </Link>

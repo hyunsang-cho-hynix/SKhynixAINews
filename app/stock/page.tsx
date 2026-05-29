@@ -1,0 +1,767 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabaseClient";
+
+type StockRange = "1d" | "5d" | "1mo" | "6mo" | "1y";
+
+type StockWatchItem = {
+  id?: string;
+  symbol: string;
+  name: string;
+  exchange: string;
+  display_order?: number;
+  isDefault?: boolean;
+};
+
+type QuotePoint = {
+  timestamp: number;
+  close: number | null;
+};
+
+type QuoteResult = {
+  symbol: string;
+  name: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  currency: string;
+  points: QuotePoint[];
+};
+
+type MarketArticle = {
+  id: string;
+  topic: string;
+  polished_title: string;
+  summary: string;
+  importance_score: number;
+  source: string;
+  published_at: string;
+  image_url: string | null;
+  is_ai_processed: boolean;
+};
+
+const defaultStocks: StockWatchItem[] = [
+  {
+    symbol: "NVDA",
+    name: "NVIDIA",
+    exchange: "NASDAQ",
+    display_order: 1,
+    isDefault: true,
+  },
+  {
+    symbol: "AAPL",
+    name: "Apple",
+    exchange: "NASDAQ",
+    display_order: 2,
+    isDefault: true,
+  },
+  {
+    symbol: "MSFT",
+    name: "Microsoft",
+    exchange: "NASDAQ",
+    display_order: 3,
+    isDefault: true,
+  },
+];
+
+const stockRanges: { label: string; value: StockRange }[] = [
+  { label: "1D", value: "1d" },
+  { label: "5D", value: "5d" },
+  { label: "1M", value: "1mo" },
+  { label: "6M", value: "6mo" },
+  { label: "1Y", value: "1y" },
+];
+
+const irLinks = [
+  {
+    title: "Financial Statements",
+    href: "https://www.skhynix.com/ir/UI-FR-IR07",
+    icon: "$",
+  },
+  {
+    title: "Disclosures",
+    href: "https://www.skhynix.com/ir/UI-FR-IR12_T1/",
+    icon: "▣",
+  },
+  {
+    title: "Earnings Release",
+    href: "https://www.skhynix.com/ir/UI-FR-IR06/",
+    icon: "↗",
+  },
+];
+
+function formatNumber(value: number | null) {
+  if (value === null || Number.isNaN(value)) {
+    return "--";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatChange(value: number | null) {
+  if (value === null || Number.isNaN(value)) {
+    return "--";
+  }
+
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}`;
+}
+
+function formatPercent(value: number | null) {
+  if (value === null || Number.isNaN(value)) {
+    return "--";
+  }
+
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+function getFinanceUrl(symbol: string) {
+  return `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}`;
+}
+
+function Sparkline({
+  points,
+  isPositive,
+}: {
+  points: QuotePoint[];
+  isPositive: boolean;
+}) {
+  const validPoints = points
+    .map((point) => point.close)
+    .filter((value): value is number => typeof value === "number");
+
+  if (validPoints.length < 2) {
+    return (
+      <div className="mt-3 flex h-10 items-center justify-center rounded-lg bg-[#26262C] text-xs text-zinc-500">
+        No chart
+      </div>
+    );
+  }
+
+  const width = 190;
+  const height = 44;
+  const min = Math.min(...validPoints);
+  const max = Math.max(...validPoints);
+  const range = max - min || 1;
+
+  const path = validPoints
+    .map((value, index) => {
+      const x = (index / (validPoints.length - 1)) * width;
+      const y = height - ((value - min) / range) * height;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+
+  const areaPath = `${path} L ${width} ${height} L 0 ${height} Z`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="mt-3 h-11 w-full overflow-visible"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d={areaPath}
+        fill={isPositive ? "rgba(34,197,94,0.14)" : "rgba(239,68,68,0.14)"}
+      />
+      <path
+        d={path}
+        fill="none"
+        stroke={isPositive ? "#22c55e" : "#ef4444"}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function StockMiniCard({
+  stock,
+  quote,
+  onRemove,
+}: {
+  stock: StockWatchItem;
+  quote?: QuoteResult;
+  onRemove?: () => void;
+}) {
+  const changePercent = quote?.changePercent ?? null;
+  const isPositive = (changePercent ?? 0) >= 0;
+
+  return (
+    <article className="min-h-[160px] rounded-2xl border border-[#454550] bg-[#303039] p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold text-white">{stock.name}</h3>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#F47725]">
+            {stock.symbol}
+          </p>
+        </div>
+
+        {!stock.isDefault && onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-sm text-zinc-500 hover:text-[#EA002C]"
+            aria-label={`Remove ${stock.symbol}`}
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3">
+        <p className="text-xl font-semibold text-white">
+          {quote ? formatNumber(quote.price) : "--"}
+        </p>
+
+        <p className="mt-1 text-sm text-zinc-400">
+          {quote ? formatChange(quote.change) : "--"}
+        </p>
+
+        <p
+          className={`mt-2 inline-flex items-center gap-1 text-lg font-bold ${
+            isPositive ? "text-green-400" : "text-red-400"
+          }`}
+        >
+          {quote ? formatPercent(quote.changePercent) : "--"}
+          <span
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs text-white ${
+              isPositive ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
+            {isPositive ? "↑" : "↓"}
+          </span>
+        </p>
+      </div>
+
+      <Sparkline points={quote?.points || []} isPositive={isPositive} />
+
+      <a
+        href={getFinanceUrl(stock.symbol)}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 inline-flex text-xs font-semibold text-zinc-400 hover:text-[#ffb17a]"
+      >
+        Open quote →
+      </a>
+    </article>
+  );
+}
+
+export default function StockPage() {
+  const [userId, setUserId] = useState("");
+  const [customStocks, setCustomStocks] = useState<StockWatchItem[]>([]);
+  const [quotes, setQuotes] = useState<Record<string, QuoteResult>>({});
+  const [stockRange, setStockRange] = useState<StockRange>("1mo");
+  const [newSymbol, setNewSymbol] = useState("");
+  const [newName, setNewName] = useState("");
+  const [addingStock, setAddingStock] = useState(false);
+  const [marketArticles, setMarketArticles] = useState<MarketArticle[]>([]);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [loadingQuotes, setLoadingQuotes] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const stocks = useMemo(() => {
+    return [...defaultStocks, ...customStocks];
+  }, [customStocks]);
+
+  useEffect(() => {
+    const savedRange = localStorage.getItem(
+      "skhynix-ai-news-stock-range"
+    ) as StockRange | null;
+
+    if (
+      savedRange === "1d" ||
+      savedRange === "5d" ||
+      savedRange === "1mo" ||
+      savedRange === "6mo" ||
+      savedRange === "1y"
+    ) {
+      setStockRange(savedRange);
+    }
+
+    loadUserAndWatchlist();
+    loadMarketArticles();
+  }, []);
+
+  useEffect(() => {
+    if (stocks.length > 0) {
+      loadQuotes(stocks, stockRange);
+    }
+  }, [stocks, stockRange]);
+
+  function handleStockRangeChange(nextRange: StockRange) {
+    setStockRange(nextRange);
+    localStorage.setItem("skhynix-ai-news-stock-range", nextRange);
+  }
+
+  async function loadUserAndWatchlist() {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+
+      if (!user) {
+        setUserId("");
+        setCustomStocks([]);
+        return;
+      }
+
+      setUserId(user.id);
+
+      const { data, error } = await supabase
+        .from("user_stock_watchlist")
+        .select("id, symbol, name, exchange, display_order")
+        .eq("user_id", user.id)
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setCustomStocks(
+        (data || []).map((item) => ({
+          id: item.id,
+          symbol: item.symbol,
+          name: item.name || item.symbol,
+          exchange: item.exchange || "NASDAQ",
+          display_order: item.display_order || 0,
+          isDefault: false,
+        }))
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to load stock watchlist."
+      );
+    }
+  }
+
+  async function loadQuotes(items: StockWatchItem[], range: StockRange) {
+    setLoadingQuotes(true);
+
+    try {
+      const symbols = Array.from(new Set(items.map((item) => item.symbol))).join(
+        ","
+      );
+
+      const response = await fetch(
+        `/api/stocks/quote?symbols=${encodeURIComponent(
+          symbols
+        )}&range=${encodeURIComponent(range)}`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load stock quotes.");
+      }
+
+      const nextQuotes: Record<string, QuoteResult> = {};
+
+      for (const quote of data.results || []) {
+        nextQuotes[quote.symbol] = quote;
+      }
+
+      setQuotes(nextQuotes);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to load stock quotes."
+      );
+    } finally {
+      setLoadingQuotes(false);
+    }
+  }
+
+  async function handleAddStock() {
+    const symbol = newSymbol.trim().toUpperCase();
+    const name = newName.trim() || symbol;
+
+    if (!symbol || addingStock) {
+      return;
+    }
+
+    if (!userId) {
+      setErrorMessage("Please log in to save custom stock tickers.");
+      return;
+    }
+
+    const alreadyExists = stocks.some((stock) => stock.symbol === symbol);
+
+    if (alreadyExists) {
+      setNewSymbol("");
+      setNewName("");
+      return;
+    }
+
+    setAddingStock(true);
+    setErrorMessage("");
+
+    try {
+      const { error } = await supabase.from("user_stock_watchlist").insert({
+        user_id: userId,
+        symbol,
+        name,
+        exchange: "NASDAQ",
+        display_order: customStocks.length + 10,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setNewSymbol("");
+      setNewName("");
+      await loadUserAndWatchlist();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to add stock ticker."
+      );
+    } finally {
+      setAddingStock(false);
+    }
+  }
+
+  async function handleRemoveStock(stock: StockWatchItem) {
+    if (!stock.id) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("user_stock_watchlist")
+        .delete()
+        .eq("id", stock.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await loadUserAndWatchlist();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove stock ticker."
+      );
+    }
+  }
+
+  async function loadMarketArticles() {
+    setLoadingNews(true);
+    setErrorMessage("");
+
+    try {
+      const { data, error } = await supabase
+        .from("processed_articles")
+        .select(
+          "id, topic, polished_title, summary, importance_score, source, published_at, image_url, is_ai_processed"
+        )
+        .in("topic", [
+          "Stock Market",
+          "Semiconductor",
+          "AI",
+          "SK hynix / Memory Industry",
+          "Cloud",
+        ])
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (error) {
+        throw error;
+      }
+
+      setMarketArticles(data || []);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to load market news."
+      );
+    } finally {
+      setLoadingNews(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#26262C] text-white">
+      <Navbar />
+
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        <Link
+          href="/"
+          className="mb-8 inline-block text-sm font-semibold text-[#ffb17a] hover:text-[#F47725]"
+        >
+          ← Back to Home
+        </Link>
+
+        <div className="mb-8 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#ffb17a]" />
+
+          <div className="p-6">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[#F47725]">
+              Stock Information
+            </p>
+
+            <h1 className="text-4xl font-bold tracking-tight text-white">
+              SK hynix Stock Ticker
+            </h1>
+
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+              View SK hynix stock information, key investor links, customer
+              ecosystem tickers, and market-related technology news.
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-8 grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="grid h-[430px] grid-rows-3 gap-4">
+            {irLinks.map((item) => (
+              <a
+                key={item.title}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between rounded-2xl border border-[#454550] bg-[#303039] px-6 transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843]"
+              >
+                <div className="flex items-center gap-5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#202026] text-lg font-bold text-[#ffb17a]">
+                    {item.icon}
+                  </div>
+
+                  <h2 className="text-lg font-bold text-white">
+                    {item.title}
+                  </h2>
+                </div>
+
+                <span className="text-2xl text-zinc-500 transition group-hover:translate-x-1 group-hover:text-[#F47725]">
+                  →
+                </span>
+              </a>
+            ))}
+          </div>
+
+          <section className="h-[430px] overflow-hidden rounded-2xl border border-[#454550] bg-white shadow-sm">
+            <div className="h-full w-full overflow-hidden bg-white">
+              <iframe
+                title="SK hynix stock ticker"
+                src="https://asia.tools.euroland.com/tools/ticker/html/?companycode=kr-000660&v=redesign&lang=en-gb"
+                className="h-[500px] w-[112%] border-0"
+                style={{
+                  transform: "translateX(-5.5%) translateY(25px) scale(1.08)",
+                  transformOrigin: "top center",
+                }}
+                loading="lazy"
+              />
+            </div>
+          </section>
+        </div>
+
+        <section className="mb-8 rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
+          <div className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[#F47725]">
+                Customer & Ecosystem Watchlist
+              </p>
+              <h2 className="text-2xl font-bold text-white">
+                Customer Stock Tickers
+              </h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Default list includes NVIDIA, Apple, and Microsoft. Add more
+                companies to your saved watchlist.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <div className="flex rounded-full border border-[#454550] bg-[#26262C] p-1">
+                {stockRanges.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => handleStockRangeChange(item.value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                      stockRange === item.value
+                        ? "bg-[#F47725] text-white"
+                        : "text-zinc-400 hover:bg-[#303039] hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {loadingQuotes && (
+                <p className="text-xs text-zinc-500">Loading quotes...</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {stocks.map((stock) => (
+              <StockMiniCard
+                key={`${stock.symbol}-${stock.id || "default"}`}
+                stock={stock}
+                quote={quotes[stock.symbol]}
+                onRemove={
+                  stock.isDefault ? undefined : () => handleRemoveStock(stock)
+                }
+              />
+            ))}
+
+            <div className="min-h-[160px] rounded-2xl border border-dashed border-[#5A5A66] bg-[#26262C] p-4">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F47725] text-2xl font-bold text-white">
+                  +
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-white">Add ticker</h3>
+                  <p className="text-xs text-zinc-400">
+                    Saved to your account
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  value={newSymbol}
+                  onChange={(event) => setNewSymbol(event.target.value)}
+                  placeholder="Ticker, e.g. TSM"
+                  className="w-full rounded-xl border border-[#454550] bg-[#303039] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#F47725]"
+                />
+
+                <input
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  placeholder="Name optional"
+                  className="w-full rounded-xl border border-[#454550] bg-[#303039] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#F47725]"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleAddStock}
+                  disabled={addingStock}
+                  className="w-full rounded-xl bg-[#F47725] px-4 py-3 text-sm font-bold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {addingStock ? "Adding..." : "Add"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {!userId && (
+            <p className="mt-4 text-sm text-zinc-500">
+              Login is required to save custom tickers. Default tickers are
+              still visible.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
+          <div className="mb-6 flex flex-col justify-between gap-3 border-b border-[#454550] pb-5 md:flex-row md:items-end">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[#F47725]">
+                Market News
+              </p>
+              <h2 className="text-2xl font-bold text-white">
+                Market & Technology Headlines
+              </h2>
+            </div>
+
+            <Link
+              href="/news-ai"
+              className="text-sm font-semibold text-[#ffb17a] hover:text-[#F47725]"
+            >
+              Search News + AI →
+            </Link>
+          </div>
+
+          {errorMessage && (
+            <div className="mb-5 rounded-2xl border border-[#EA002C]/20 bg-[#EA002C]/10 p-6 text-red-200">
+              {errorMessage}
+            </div>
+          )}
+
+          {loadingNews && (
+            <div className="rounded-2xl bg-[#26262C] p-8 text-center text-zinc-400">
+              Loading market-related news...
+            </div>
+          )}
+
+          {!loadingNews && !errorMessage && marketArticles.length === 0 && (
+            <div className="rounded-2xl bg-[#26262C] p-8 text-center">
+              <h3 className="text-xl font-bold text-white">
+                No market news collected yet
+              </h3>
+              <p className="mt-2 text-sm text-zinc-400">
+                Market-related articles will appear here after the daily
+                collection job runs.
+              </p>
+            </div>
+          )}
+
+          {!loadingNews && marketArticles.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {marketArticles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/brief-article/${article.id}`}
+                  className="group grid gap-4 rounded-2xl border border-[#454550] bg-[#26262C] p-5 transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843] md:grid-cols-[160px_1fr]"
+                >
+                  {article.image_url ? (
+                    <img
+                      src={article.image_url}
+                      alt=""
+                      className="h-32 w-full rounded-xl object-cover md:h-full"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-full items-center justify-center rounded-xl bg-[#303039] text-sm font-semibold text-zinc-500 md:h-full">
+                      No Image
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-bold text-[#ffb17a]">
+                        {article.topic}
+                      </span>
+
+                      {article.is_ai_processed && (
+                        <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-bold text-[#ffb17a]">
+                          AI Processed
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="line-clamp-2 text-lg font-bold leading-snug text-white group-hover:text-[#ffb17a]">
+                      {article.polished_title}
+                    </h3>
+
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">
+                      {article.summary}
+                    </p>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-[#454550] pt-3 text-xs text-zinc-500">
+                      <span className="truncate">{article.source}</span>
+                      <span>Score {article.importance_score}/10</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </section>
+    </main>
+  );
+}
