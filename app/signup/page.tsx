@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
 
   async function handleSignup() {
     setLoading(true);
@@ -41,9 +43,7 @@ export default function SignupPage() {
       }
 
       if (data.user) {
-        setMessage(
-          "Account created. Check your email if confirmation is enabled, then log in."
-        );
+        router.push("/subscribe");
       } else {
         setMessage("Signup request completed.");
       }

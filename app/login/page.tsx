@@ -36,7 +36,7 @@ export default function LoginPage() {
         throw error;
       }
 
-      router.push("/subscribe");
+      router.push("/");
       router.refresh();
     } catch (error) {
       setErrorMessage(

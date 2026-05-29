@@ -1,7 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type NewsLanguagePreference = "en" | "ko" | "both";
 
 type UserPreference = {
   user_id: string;
@@ -10,37 +11,38 @@ type UserPreference = {
   optional_topics: string[];
   send_time: string;
   timezone: string;
+  news_language_preference: NewsLanguagePreference;
   is_subscribed: boolean;
 };
 
-type GNewsArticle = {
-  title: string;
-  description: string;
-  content: string;
-  url: string;
-  image: string;
-  publishedAt: string;
-  source: {
-    name: string;
-    url: string;
-  };
-};
-
-type AiResult = {
-  polishedTitle: string;
+type ProcessedArticle = {
+  id: string;
   topic: string;
+  polished_title: string;
+  polished_title_ko: string | null;
   summary: string;
-  importanceScore: number;
+  summary_ko: string | null;
+  importance_score: number;
   reason: string;
+  reason_ko: string | null;
+  source: string;
+  published_at: string;
+  original_url: string;
+  image_url: string | null;
+  is_ai_processed: boolean;
+  collection_date: string | null;
 };
 
-type ProcessedEmailArticle = {
+type EmailArticle = {
   id: string;
   topic: string;
   polishedTitle: string;
+  polishedTitleKo: string | null;
   summary: string;
+  summaryKo: string | null;
   importanceScore: number;
   reason: string;
+  reasonKo: string | null;
   source: string;
   publishedAt: string;
   internalArticleUrl: string;
@@ -49,31 +51,14 @@ type ProcessedEmailArticle = {
 type SubscriberResult = {
   email: string;
   success: boolean;
+  languagePreference: NewsLanguagePreference;
   topicsRequested: string[];
   articlesSent: number;
-  failedTopics: { topic: string; error: string }[];
   error?: string;
 };
 
-function getTopicQuery(topic: string) {
-  const topicMap: Record<string, string> = {
-    Semiconductor: "semiconductor OR HBM OR memory chip OR advanced packaging",
-    AI: "artificial intelligence OR AI infrastructure OR AI chip",
-    "SK hynix / Memory Industry": "SK hynix OR HBM OR memory semiconductor",
-    Automation: "factory automation OR smart factory OR industrial automation",
-    Robotics: "industrial robotics OR AI robotics OR warehouse robots",
-    IT: "enterprise IT OR cybersecurity OR cloud infrastructure",
-    Cloud: "cloud infrastructure OR data center OR enterprise cloud",
-    Cybersecurity: "cybersecurity OR zero trust OR enterprise security",
-    "Data Center": "data center OR AI data center OR cloud infrastructure",
-    Manufacturing: "advanced manufacturing OR smart manufacturing",
-  };
-
-  return topicMap[topic] || topic;
-}
-
 function escapeHtml(value: string) {
-  return value
+  return String(value || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -85,128 +70,66 @@ function uniqueTopics(topics: string[]) {
   return Array.from(new Set(topics.filter(Boolean)));
 }
 
-function getLocalHour(timezone: string) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    hour: "numeric",
-    hour12: false,
-  });
-
-  const hourString = formatter.format(new Date());
-  return Number(hourString);
-}
-
-function shouldSendNow(subscriber: UserPreference) {
-  const timezone = subscriber.timezone || "America/New_York";
-  const localHour = getLocalHour(timezone);
-
-  return localHour === 8;
-}
-
-async function fetchOneNewsArticle(topic: string, apiKey: string) {
-  const query = getTopicQuery(topic);
-
-  const url = new URL("https://gnews.io/api/v4/search");
-  url.searchParams.set("q", query);
-  url.searchParams.set("lang", "en");
-  url.searchParams.set("country", "us");
-  url.searchParams.set("max", "1");
-  url.searchParams.set("apikey", apiKey);
-
-  const response = await fetch(url.toString(), {
-    cache: "no-store",
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data.errors?.[0] || `Failed to fetch news for topic: ${topic}`
-    );
+function normalizeLanguagePreference(
+  value: string | null | undefined
+): NewsLanguagePreference {
+  if (value === "ko" || value === "both") {
+    return value;
   }
 
-  const article = data.articles?.[0] as GNewsArticle | undefined;
-
-  if (!article) {
-    throw new Error(`No article found for topic: ${topic}`);
-  }
-
-  return article;
+  return "en";
 }
 
-async function processWithGemini(article: GNewsArticle, topic: string) {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Missing GEMINI_API_KEY");
+function getEmailSubject(languagePreference: NewsLanguagePreference) {
+  if (languagePreference === "ko") {
+    return "오늘의 반도체 및 기술 뉴스 브리프";
   }
 
-  const ai = new GoogleGenAI({
-    apiKey,
-  });
+  if (languagePreference === "both") {
+    return "Daily Semiconductor & Technology Brief / 오늘의 기술 뉴스 브리프";
+  }
 
-  const prompt = `
-You are an AI news analyst for an SK hynix-style internal daily technology briefing.
-
-Analyze this public news article.
-
-Expected topic:
-${topic}
-
-Article title:
-${article.title}
-
-Article description:
-${article.description || article.content || "No description provided."}
-
-Source:
-${article.source?.name || "Unknown source"}
-
-Return ONLY valid JSON.
-Do not include markdown.
-
-JSON format:
-{
-  "polishedTitle": "professional rewritten title",
-  "topic": "Semiconductor | AI | SK hynix / Memory Industry | Automation | Robotics | IT | Cloud | Cybersecurity | Data Center | Manufacturing",
-  "summary": "2 sentence professional summary",
-  "importanceScore": number from 1 to 10,
-  "reason": "brief reason why this article matters"
+  return "Daily Semiconductor & Technology Brief";
 }
-`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-  });
-
-  const text = response.text ?? "";
-
-  const cleanedText = text
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
-
-  try {
-    return JSON.parse(cleanedText) as AiResult;
-  } catch {
+function getArticleDisplayText(
+  article: EmailArticle,
+  languagePreference: NewsLanguagePreference
+) {
+  if (languagePreference === "ko") {
     return {
-      polishedTitle: article.title,
-      topic,
-      summary: cleanedText || article.description || article.title,
-      importanceScore: 5,
-      reason:
-        "Gemini returned text that was not valid JSON, so the raw result was used as the summary.",
+      title: article.polishedTitleKo || article.polishedTitle,
+      summary: article.summaryKo || article.summary,
+      reason: article.reasonKo || article.reason,
     };
   }
+
+  if (languagePreference === "both") {
+    return {
+      title: article.polishedTitle,
+      summary: article.summary,
+      reason: article.reason,
+      koreanTitle: article.polishedTitleKo || "",
+      koreanSummary: article.summaryKo || "",
+      koreanReason: article.reasonKo || "",
+    };
+  }
+
+  return {
+    title: article.polishedTitle,
+    summary: article.summary,
+    reason: article.reason,
+  };
 }
 
 function buildEmailHtml({
   userEmail,
   articles,
+  languagePreference,
 }: {
   userEmail: string;
-  articles: ProcessedEmailArticle[];
+  articles: EmailArticle[];
+  languagePreference: NewsLanguagePreference;
 }) {
   const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
 
@@ -216,27 +139,66 @@ function buildEmailHtml({
 
   const manageTopicsUrl = `${appBaseUrl}/settings/topics`;
 
-  const today = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const groupedArticles = articles.reduce<
-    Record<string, ProcessedEmailArticle[]>
-  >((groups, article) => {
-    if (!groups[article.topic]) {
-      groups[article.topic] = [];
+  const today = new Date().toLocaleDateString(
+    languagePreference === "ko" ? "ko-KR" : "en-US",
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     }
+  );
 
-    groups[article.topic].push(article);
-    return groups;
-  }, {});
+  const headerTitle =
+    languagePreference === "ko"
+      ? "오늘의 반도체 및 기술 뉴스 브리프"
+      : "Daily Semiconductor & Technology Brief";
+
+  const introText =
+    languagePreference === "ko"
+      ? "안녕하세요. 저장된 관심 토픽을 기준으로 AI가 선별하고 요약한 오늘의 기술 뉴스 브리프입니다."
+      : "Good morning. Here is your daily AI-curated technology news brief based on your saved topic preferences.";
+
+  const groupedArticles = articles.reduce<Record<string, EmailArticle[]>>(
+    (groups, article) => {
+      if (!groups[article.topic]) {
+        groups[article.topic] = [];
+      }
+
+      groups[article.topic].push(article);
+      return groups;
+    },
+    {}
+  );
 
   const topicSections = Object.entries(groupedArticles)
     .map(([topic, topicArticles]) => {
       const articleCards = topicArticles
         .map((article) => {
+          const display = getArticleDisplayText(article, languagePreference);
+
+          const bilingualBlock =
+            languagePreference === "both" &&
+            "koreanSummary" in display &&
+            display.koreanSummary
+              ? `
+                <div style="margin:14px 0; padding:12px; background:#ffffff; border-radius:10px;">
+                  <p style="margin:0 0 6px; color:#94a3b8; font-size:11px; font-weight:700; text-transform:uppercase;">
+                    Korean Translation
+                  </p>
+                  ${
+                    display.koreanTitle
+                      ? `<p style="margin:0 0 8px; color:#0f172a; font-size:15px; font-weight:700; line-height:1.5;">${escapeHtml(
+                          display.koreanTitle
+                        )}</p>`
+                      : ""
+                  }
+                  <p style="margin:0; color:#475569; font-size:13px; line-height:1.6;">
+                    ${escapeHtml(display.koreanSummary)}
+                  </p>
+                </div>
+              `
+              : "";
+
           return `
             <tr>
               <td style="padding:18px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc;">
@@ -244,35 +206,42 @@ function buildEmailHtml({
                   <span style="display:inline-block; padding:4px 10px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700;">
                     ${escapeHtml(article.topic)}
                   </span>
-                  <span style="float:right; color:#64748b; font-size:12px;">
-                    Score ${article.importanceScore}/10
+                  <span style="float:right; color:#16a34a; font-size:12px; font-weight:700;">
+                    AI Processed
                   </span>
                 </div>
 
                 <h3 style="margin:12px 0; color:#0f172a; font-size:20px; line-height:1.35;">
-                  ${escapeHtml(article.polishedTitle)}
+                  ${escapeHtml(display.title)}
                 </h3>
 
                 <p style="margin:0 0 14px; color:#475569; font-size:14px; line-height:1.6;">
-                  ${escapeHtml(article.summary)}
+                  ${escapeHtml(display.summary)}
                 </p>
+
+                ${bilingualBlock}
 
                 <div style="margin:14px 0; padding:12px; background:#ffffff; border-radius:10px;">
                   <p style="margin:0 0 4px; color:#94a3b8; font-size:11px; font-weight:700; text-transform:uppercase;">
-                    Why this matters
+                    ${
+                      languagePreference === "ko"
+                        ? "중요 포인트"
+                        : "Why this matters"
+                    }
                   </p>
                   <p style="margin:0; color:#475569; font-size:13px; line-height:1.5;">
-                    ${escapeHtml(article.reason)}
+                    ${escapeHtml(display.reason)}
                   </p>
                 </div>
 
                 <p style="margin:0 0 14px; color:#64748b; font-size:12px;">
                   Source: ${escapeHtml(article.source)}<br />
-                  Published: ${escapeHtml(article.publishedAt)}
+                  Published: ${escapeHtml(article.publishedAt)}<br />
+                  Score: ${article.importanceScore}/10
                 </p>
 
                 <a href="${escapeHtml(article.internalArticleUrl)}" style="display:inline-block; padding:10px 14px; border-radius:8px; background:#2563eb; color:#ffffff; font-size:14px; font-weight:700; text-decoration:none;">
-                  Read Full Brief
+                  ${languagePreference === "ko" ? "전체 브리프 보기" : "Read Full Brief"}
                 </a>
               </td>
             </tr>
@@ -311,10 +280,10 @@ function buildEmailHtml({
                       SK hynix AI News Brief
                     </p>
                     <h1 style="margin:0; font-size:30px; line-height:1.2;">
-                      Daily Semiconductor & Technology Brief
+                      ${escapeHtml(headerTitle)}
                     </h1>
                     <p style="margin:12px 0 0; color:#e0f2fe; font-size:14px;">
-                      ${today}
+                      ${escapeHtml(today)}
                     </p>
                   </td>
                 </tr>
@@ -322,7 +291,7 @@ function buildEmailHtml({
                 <tr>
                   <td style="padding:24px 32px 0;">
                     <p style="margin:0; color:#475569; font-size:14px; line-height:1.6;">
-                      Good morning. Here is your daily AI-curated technology news brief based on your saved topic preferences.
+                      ${escapeHtml(introText)}
                     </p>
                   </td>
                 </tr>
@@ -356,139 +325,106 @@ function buildEmailHtml({
   `;
 }
 
+async function getTodayAiProcessedArticlesForTopics({
+  topics,
+  appBaseUrl,
+}: {
+  topics: string[];
+  appBaseUrl: string;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const maxArticlesPerTopic = Number(
+    process.env.EMAIL_ARTICLES_PER_TOPIC || "3"
+  );
+
+  const emailArticles: EmailArticle[] = [];
+
+  for (const topic of topics) {
+    const { data, error } = await supabaseAdmin
+      .from("processed_articles")
+      .select(
+        "id, topic, polished_title, polished_title_ko, summary, summary_ko, importance_score, reason, reason_ko, source, published_at, original_url, image_url, is_ai_processed, collection_date"
+      )
+      .eq("topic", topic)
+      .eq("is_ai_processed", true)
+      .eq("collection_date", today)
+      .order("importance_score", { ascending: false })
+      .limit(maxArticlesPerTopic);
+
+    if (error) {
+      throw error;
+    }
+
+    const articles = (data || []) as ProcessedArticle[];
+
+    for (const article of articles) {
+      emailArticles.push({
+        id: article.id,
+        topic: article.topic,
+        polishedTitle: article.polished_title,
+        polishedTitleKo: article.polished_title_ko,
+        summary: article.summary,
+        summaryKo: article.summary_ko,
+        importanceScore: article.importance_score,
+        reason: article.reason,
+        reasonKo: article.reason_ko,
+        source: article.source,
+        publishedAt: new Date(article.published_at).toLocaleString(),
+        internalArticleUrl: `${appBaseUrl}/brief-article/${article.id}`,
+      });
+    }
+  }
+
+  return emailArticles;
+}
+
 async function processSubscriber({
   subscriber,
-  gnewsApiKey,
   resendApiKey,
   appBaseUrl,
 }: {
   subscriber: UserPreference;
-  gnewsApiKey: string;
   resendApiKey: string;
   appBaseUrl: string;
 }): Promise<SubscriberResult> {
-  const allTopics = uniqueTopics([
+  const languagePreference = normalizeLanguagePreference(
+    subscriber.news_language_preference
+  );
+
+  const topics = uniqueTopics([
     ...(subscriber.mandatory_topics || []),
     ...(subscriber.optional_topics || []),
   ]);
 
-  const topicsToProcess = allTopics.slice(0, 5);
+  const emailArticles = await getTodayAiProcessedArticlesForTopics({
+    topics,
+    appBaseUrl,
+  });
 
-  const processedArticles: ProcessedEmailArticle[] = [];
-  const failedTopics: { topic: string; error: string }[] = [];
-
-  for (const topic of topicsToProcess) {
-    try {
-      const newsArticle = await fetchOneNewsArticle(topic, gnewsApiKey);
-      const aiResult = await processWithGemini(newsArticle, topic);
-
-    //   const { data: insertedArticle, error: insertError } = await supabaseAdmin
-    //     .from("processed_articles")
-    //     .insert({
-    //       topic: aiResult.topic || topic,
-    //       original_title: newsArticle.title,
-    //       polished_title: aiResult.polishedTitle,
-    //       summary: aiResult.summary,
-    //       importance_score: aiResult.importanceScore,
-    //       reason: aiResult.reason,
-    //       source: newsArticle.source?.name || "Unknown source",
-    //       published_at: newsArticle.publishedAt,
-    //       original_url: newsArticle.url,
-    //       image_url: newsArticle.image,
-    //     })
-    //     .select("id")
-    //     .single();
-
-    //   if (insertError) {
-    //     throw insertError;
-    //   }
-
-    //   const internalArticleUrl = `${appBaseUrl}/brief-article/${insertedArticle.id}`;
-
-    //   processedArticles.push({
-    //     id: insertedArticle.id,
-    
-        const { data: existingArticle, error: existingArticleError } =
-    await supabaseAdmin
-        .from("processed_articles")
-        .select("id")
-        .eq("original_url", newsArticle.url)
-        .maybeSingle();
-
-    if (existingArticleError) {
-    throw existingArticleError;
-    }
-
-    let articleId = existingArticle?.id;
-
-    if (!articleId) {
-    const { data: insertedArticle, error: insertError } = await supabaseAdmin
-        .from("processed_articles")
-        .insert({
-        topic: aiResult.topic || topic,
-        original_title: newsArticle.title,
-        polished_title: aiResult.polishedTitle,
-        summary: aiResult.summary,
-        importance_score: aiResult.importanceScore,
-        reason: aiResult.reason,
-        source: newsArticle.source?.name || "Unknown source",
-        published_at: newsArticle.publishedAt,
-        original_url: newsArticle.url,
-        image_url: newsArticle.image,
-        })
-        .select("id")
-        .single();
-
-    if (insertError) {
-        throw insertError;
-    }
-
-    articleId = insertedArticle.id;
-    }
-
-    const internalArticleUrl = `${appBaseUrl}/brief-article/${articleId}`;
-
-    processedArticles.push({
-    id: articleId,
-        topic: aiResult.topic || topic,
-        polishedTitle: aiResult.polishedTitle,
-        summary: aiResult.summary,
-        importanceScore: aiResult.importanceScore,
-        reason: aiResult.reason,
-        source: newsArticle.source?.name || "Unknown source",
-        publishedAt: new Date(newsArticle.publishedAt).toLocaleString(),
-        internalArticleUrl,
-      });
-    } catch (error) {
-      failedTopics.push({
-        topic,
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  }
-
-  if (processedArticles.length === 0) {
+  if (emailArticles.length === 0) {
     return {
       email: subscriber.email,
       success: false,
-      topicsRequested: topicsToProcess,
+      languagePreference,
+      topicsRequested: topics,
       articlesSent: 0,
-      failedTopics,
-      error: "No articles were processed successfully.",
+      error:
+        "No AI processed articles found for this subscriber's topics today.",
     };
   }
 
-  processedArticles.sort((a, b) => b.importanceScore - a.importanceScore);
+  emailArticles.sort((a, b) => b.importanceScore - a.importanceScore);
 
   const resend = new Resend(resendApiKey);
 
   const { error: emailError } = await resend.emails.send({
     from: "SK hynix AI News <onboarding@resend.dev>",
     to: [subscriber.email],
-    subject: "Daily Semiconductor & Technology Brief",
+    subject: getEmailSubject(languagePreference),
     html: buildEmailHtml({
       userEmail: subscriber.email,
-      articles: processedArticles,
+      articles: emailArticles,
+      languagePreference,
     }),
   });
 
@@ -496,9 +432,9 @@ async function processSubscriber({
     return {
       email: subscriber.email,
       success: false,
-      topicsRequested: topicsToProcess,
-      articlesSent: processedArticles.length,
-      failedTopics,
+      languagePreference,
+      topicsRequested: topics,
+      articlesSent: emailArticles.length,
       error: JSON.stringify(emailError),
     };
   }
@@ -506,9 +442,9 @@ async function processSubscriber({
   return {
     email: subscriber.email,
     success: true,
-    topicsRequested: topicsToProcess,
-    articlesSent: processedArticles.length,
-    failedTopics,
+    languagePreference,
+    topicsRequested: topics,
+    articlesSent: emailArticles.length,
   };
 }
 
@@ -517,9 +453,12 @@ export async function GET(request: Request) {
     const cronSecret = process.env.CRON_SECRET;
     const { searchParams } = new URL(request.url);
     const requestSecret = searchParams.get("secret");
-    const forceSend = searchParams.get("force") === "true";
+    const authHeader = request.headers.get("authorization");
 
-    if (cronSecret && requestSecret !== cronSecret) {
+    const isAuthorizedByQuery = requestSecret === cronSecret;
+    const isAuthorizedByHeader = authHeader === `Bearer ${cronSecret}`;
+
+    if (cronSecret && !isAuthorizedByQuery && !isAuthorizedByHeader) {
       return NextResponse.json(
         {
           success: false,
@@ -529,60 +468,39 @@ export async function GET(request: Request) {
       );
     }
 
-    const gnewsApiKey = process.env.GNEWS_API_KEY;
     const resendApiKey = process.env.RESEND_API_KEY;
     const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-
-    if (!gnewsApiKey) {
-      throw new Error("Missing GNEWS_API_KEY");
-    }
 
     if (!resendApiKey) {
       throw new Error("Missing RESEND_API_KEY");
     }
 
+    const maxSubscribers = Number(process.env.MAX_EMAIL_SUBSCRIBERS || "400");
+
     const { data: subscribers, error: subscriberError } = await supabaseAdmin
       .from("user_topic_preferences")
       .select("*")
       .eq("is_subscribed", true)
-      .limit(5);
+      .limit(maxSubscribers);
 
     if (subscriberError) {
       throw subscriberError;
     }
-    
 
     const subscribedUsers = (subscribers || []) as UserPreference[];
 
     if (subscribedUsers.length === 0) {
-    return NextResponse.json({
+      return NextResponse.json({
         success: false,
         message: "No subscribed users found.",
-    });
-    }
-
-    const eligibleUsers = forceSend
-    ? subscribedUsers
-    : subscribedUsers.filter((subscriber) => shouldSendNow(subscriber));
-
-    if (eligibleUsers.length === 0) {
-    return NextResponse.json({
-        success: true,
-        message:
-        "No subscribers are scheduled for this hour based on their time zone.",
-        subscribersChecked: subscribedUsers.length,
-        successfulSends: 0,
-        failedSends: 0,
-        results: [],
-    });
+      });
     }
 
     const results: SubscriberResult[] = [];
 
-    for (const subscriber of eligibleUsers) {
+    for (const subscriber of subscribedUsers) {
       const result = await processSubscriber({
         subscriber,
-        gnewsApiKey,
         resendApiKey,
         appBaseUrl,
       });
@@ -595,16 +513,14 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: successfulSends > 0,
-      message: "Daily brief job completed.",
-      subscribersChecked: eligibleUsers.length,
-      totalSubscribedUsers: subscribedUsers.length,
-      forceSend,
+      message: "Daily email job completed using stored AI processed articles.",
+      subscribersChecked: subscribedUsers.length,
       successfulSends,
       failedSends,
       results,
     });
   } catch (error) {
-    console.error("Daily brief job error:", error);
+    console.error("Daily brief email job error:", error);
 
     return NextResponse.json(
       {
@@ -612,7 +528,7 @@ export async function GET(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Failed to send daily brief.",
+            : "Failed to send daily brief emails.",
       },
       { status: 500 }
     );

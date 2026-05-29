@@ -1,7 +1,11 @@
 {
   "crons": [
     {
-      "path": "/api/jobs/send-daily-brief?secret=thisisdevelopedbyhyunsangcho",
+      "path": "/api/jobs/collect-daily-news",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/jobs/send-daily-brief",
       "schedule": "0 12 * * *"
     }
   ]
