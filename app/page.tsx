@@ -25,6 +25,7 @@ type ProcessedArticle = {
   created_at: string;
   is_ai_processed: boolean;
   ai_processed_at: string | null;
+  original_language: string | null;
 };
 
 const topics = [
@@ -36,7 +37,13 @@ const topics = [
   "Robotics",
   "IT",
   "Cloud",
+  "Stock Market",
 ];
+
+const topicOnlyList = topics.filter((topic) => topic !== "All");
+
+const ALL_ARTICLES_PER_TOPIC = 25;
+const TOPIC_ARTICLE_LIMIT = 150;
 
 function normalizeLanguagePreference(value: string | null | undefined) {
   if (value === "ko" || value === "both") {
@@ -82,6 +89,20 @@ function getArticleDisplay(
   };
 }
 
+function sortArticles(articles: ProcessedArticle[]) {
+  return [...articles].sort((a, b) => {
+    if (a.is_ai_processed !== b.is_ai_processed) {
+      return Number(b.is_ai_processed) - Number(a.is_ai_processed);
+    }
+
+    if (a.importance_score !== b.importance_score) {
+      return b.importance_score - a.importance_score;
+    }
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+
 export default function Home() {
   const [articles, setArticles] = useState<ProcessedArticle[]>([]);
   const [selectedTopic, setSelectedTopic] = useState("All");
@@ -92,9 +113,12 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    loadArticles();
     loadUserPreferences();
   }, []);
+
+  useEffect(() => {
+    loadArticles(selectedTopic);
+  }, [selectedTopic]);
 
   async function loadUserPreferences() {
     try {
@@ -127,22 +151,50 @@ export default function Home() {
     }
   }
 
-  async function loadArticles() {
+  async function loadArticles(topic: string) {
     setLoading(true);
     setErrorMessage("");
 
     try {
+      if (topic === "All") {
+        const topicQueries = await Promise.all(
+          topicOnlyList.map(async (topicName) => {
+            const { data, error } = await supabase
+              .from("processed_articles")
+              .select("*")
+              .eq("topic", topicName)
+              .order("is_ai_processed", { ascending: false })
+              .order("importance_score", { ascending: false })
+              .order("created_at", { ascending: false })
+              .limit(ALL_ARTICLES_PER_TOPIC);
+
+            if (error) {
+              throw error;
+            }
+
+            return (data || []) as ProcessedArticle[];
+          })
+        );
+
+        const mergedArticles = topicQueries.flat();
+        setArticles(sortArticles(mergedArticles));
+        return;
+      }
+
       const { data, error } = await supabase
         .from("processed_articles")
         .select("*")
+        .eq("topic", topic)
+        .order("is_ai_processed", { ascending: false })
+        .order("importance_score", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(90);
+        .limit(TOPIC_ARTICLE_LIMIT);
 
       if (error) {
         throw error;
       }
 
-      setArticles(data || []);
+      setArticles((data || []) as ProcessedArticle[]);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to load articles."
@@ -161,33 +213,26 @@ export default function Home() {
     }
   );
 
-  const filteredArticles =
-    selectedTopic === "All"
-      ? articles
-      : articles.filter((article) => article.topic === selectedTopic);
-
-  const topArticles = [...filteredArticles]
-    .sort((a, b) => {
-      if (a.is_ai_processed !== b.is_ai_processed) {
-        return Number(b.is_ai_processed) - Number(a.is_ai_processed);
-      }
-
-      return b.importance_score - a.importance_score;
-    })
-    .slice(0, 18);
-
   const pageTitle =
     newsLanguagePreference === "ko"
       ? "오늘의 기술 뉴스 브리프"
       : "Today's Technology Brief";
 
   const sectionTitle =
-    newsLanguagePreference === "ko" ? "오늘의 주요 기사" : "Top Articles Today";
+    selectedTopic === "All"
+      ? newsLanguagePreference === "ko"
+        ? "전체 주요 기사"
+        : "All Collected Articles"
+      : selectedTopic;
 
   const sectionDescription =
-    newsLanguagePreference === "ko"
-      ? "AI 처리 여부와 중요도 점수를 기준으로 정렬됩니다"
-      : "Ranked by AI processing status and importance score";
+    selectedTopic === "All"
+      ? newsLanguagePreference === "ko"
+        ? "모든 토픽의 수집 기사와 AI 처리 기사를 함께 보여줍니다"
+        : "Showing collected and AI-processed articles across all topics"
+      : newsLanguagePreference === "ko"
+        ? `${selectedTopic} 토픽의 수집 기사와 AI 처리 기사`
+        : `Collected and AI-processed articles for ${selectedTopic}`;
 
   return (
     <main className="min-h-screen bg-[#26262C] text-white">
@@ -213,7 +258,7 @@ export default function Home() {
         </div>
 
         <div className="mb-6 overflow-hidden rounded-2xl border border-[#454550] bg-[#303039] shadow-sm">
-          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#F47725]" />
+          <div className="h-1 w-full bg-gradient-to-r from-[#EA002C] via-[#F47725] to-[#ffb17a]" />
 
           <div className="px-6 py-5">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
@@ -228,8 +273,8 @@ export default function Home() {
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300 md:text-base">
               {newsLanguagePreference === "ko"
-                ? "공개 기술 뉴스를 토픽별로 정리하고, 주요 기사는 AI가 요약하여 데일리 이메일 브리핑으로 제공합니다."
-                : "Public technology news organized by topic. Key articles are AI-processed and prepared for daily email briefings."}
+                ? "공개 기술 뉴스를 토픽별로 수집하고, 주요 기사는 AI가 요약하여 데일리 이메일 브리핑으로 제공합니다."
+                : "Public technology news collected by topic. Key articles are AI-processed and prepared for daily email briefings."}
             </p>
           </div>
         </div>
@@ -251,17 +296,25 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-white">{sectionTitle}</h2>
-          <p className="text-sm text-zinc-400">{sectionDescription}</p>
+        <div className="mb-4 flex flex-col justify-between gap-2 md:flex-row md:items-end">
+          <div>
+            <h2 className="text-xl font-bold text-white">{sectionTitle}</h2>
+            <p className="text-sm text-zinc-400">{sectionDescription}</p>
+          </div>
+
+          {!loading && !errorMessage && (
+            <p className="text-sm text-zinc-500">
+              Showing {articles.length} articles
+            </p>
+          )}
         </div>
 
         {loading && (
           <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
             <p className="text-zinc-300">
               {newsLanguagePreference === "ko"
-                ? "AI가 선별한 기사를 불러오는 중..."
-                : "Loading AI-curated articles..."}
+                ? "수집된 기사를 불러오는 중..."
+                : "Loading collected articles..."}
             </p>
           </div>
         )}
@@ -277,12 +330,12 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !errorMessage && topArticles.length === 0 && (
+        {!loading && !errorMessage && articles.length === 0 && (
           <div className="rounded-2xl border border-[#454550] bg-[#303039] p-8 text-center">
             <h2 className="text-2xl font-semibold text-white">
               {newsLanguagePreference === "ko"
-                ? "아직 처리된 기사가 없습니다"
-                : "No processed articles yet"}
+                ? "아직 수집된 기사가 없습니다"
+                : "No collected articles yet"}
             </h2>
             <p className="mt-3 text-zinc-300">
               {newsLanguagePreference === "ko"
@@ -301,9 +354,9 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !errorMessage && topArticles.length > 0 && (
+        {!loading && !errorMessage && articles.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {topArticles.map((article) => {
+            {articles.map((article) => {
               const display = getArticleDisplay(article, newsLanguagePreference);
 
               return (
@@ -322,17 +375,22 @@ export default function Home() {
 
                   <div className="p-5">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
-                        {article.topic}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-semibold text-[#ffb17a]">
+                          {article.topic}
+                        </span>
+                      </div>
 
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                           article.is_ai_processed
-                            ? "border border-green-500/30 bg-green-500/10 text-green-300"
-                            : "border border-[#454550] bg-[#26262C] text-zinc-400"
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                            : "border-[#454550] bg-[#26262C] text-zinc-400"
                         }`}
                       >
+                        {article.is_ai_processed && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        )}
                         {article.is_ai_processed ? "AI Processed" : "Collected"}
                       </span>
                     </div>

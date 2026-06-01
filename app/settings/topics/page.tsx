@@ -15,6 +15,7 @@ const optionalTopics = [
   "Cybersecurity",
   "Data Center",
   "Manufacturing",
+  "Stock Market",
 ];
 
 const timezones = [

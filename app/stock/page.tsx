@@ -469,13 +469,7 @@ export default function StockPage() {
         .select(
           "id, topic, polished_title, summary, importance_score, source, published_at, image_url, is_ai_processed"
         )
-        .in("topic", [
-          "Stock Market",
-          "Semiconductor",
-          "AI",
-          "SK hynix / Memory Industry",
-          "Cloud",
-        ])
+        .eq("topic", "Stock Market")
         .order("created_at", { ascending: false })
         .limit(8);
 
