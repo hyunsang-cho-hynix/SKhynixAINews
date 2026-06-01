@@ -7,12 +7,9 @@ import Navbar from "@/components/Navbar";
 type SubscriberResult = {
   email: string;
   success: boolean;
+  languagePreference?: string;
   topicsRequested: string[];
   articlesSent: number;
-  failedTopics: {
-    topic: string;
-    error: string;
-  }[];
   error?: string;
 };
 
@@ -42,9 +39,9 @@ export default function AdminPage() {
         throw new Error("Please enter CRON_SECRET before running the job.");
       }
       const response = await fetch(
-      `/api/jobs/send-daily-brief?secret=${encodeURIComponent(
+        `/api/jobs/send-daily-brief?secret=${encodeURIComponent(
           cronSecret
-      )}&force=true`
+        )}&force=true`
       );
 
       const data = await response.json();
@@ -138,9 +135,9 @@ export default function AdminPage() {
 
             <p className="mt-2 text-sm leading-6 text-slate-300">
               This manually runs the same job that Vercel Cron will call every
-              morning. It reads subscribed users from Supabase, collects news
-              from GNews, processes articles with Gemini, saves them to
-              Supabase, and sends the email through Resend.
+              morning. It reads subscribed users from Supabase, finds today&apos;s
+              stored AI-processed articles for each subscriber&apos;s topics, and
+              sends the email through Resend.
             </p>
           </div>
 
@@ -238,7 +235,8 @@ export default function AdminPage() {
                       <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium">Topics</th>
                       <th className="px-4 py-3 font-medium">Articles Sent</th>
-                      <th className="px-4 py-3 font-medium">Failed Topics</th>
+                      <th className="px-4 py-3 font-medium">Language</th>
+                      <th className="px-4 py-3 font-medium">Error</th>
                     </tr>
                   </thead>
 
@@ -273,11 +271,11 @@ export default function AdminPage() {
                         </td>
 
                         <td className="px-4 py-4 text-green-100/80">
-                          {result.failedTopics.length === 0
-                            ? "None"
-                            : result.failedTopics
-                                .map((item) => `${item.topic}: ${item.error}`)
-                                .join(" | ")}
+                          {result.languagePreference || "-"}
+                        </td>
+
+                        <td className="px-4 py-4 text-green-100/80">
+                          {result.error || "None"}
                         </td>
                       </tr>
                     ))}

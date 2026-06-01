@@ -10,11 +10,24 @@ export default function Navbar() {
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     async function loadUserAndSubscription() {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
+      const savedTheme = localStorage.getItem("skhynix-ai-news-theme");
+      const metadataTheme = user?.user_metadata?.theme;
+      const nextTheme =
+        metadataTheme === "light" || metadataTheme === "dark"
+          ? metadataTheme
+          : savedTheme === "light"
+            ? "light"
+            : "dark";
+
+      setTheme(nextTheme);
+      document.documentElement.dataset.theme = nextTheme;
+      localStorage.setItem("skhynix-ai-news-theme", nextTheme);
 
       setUserEmail(user?.email ?? null);
 
@@ -44,6 +57,25 @@ export default function Navbar() {
       subscription.unsubscribe();
     };
   }, []);
+
+  async function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+
+    setTheme(nextTheme);
+    localStorage.setItem("skhynix-ai-news-theme", nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+
+    const { data } = await supabase.auth.getUser();
+
+    if (data.user) {
+      await supabase.auth.updateUser({
+        data: {
+          ...data.user.user_metadata,
+          theme: nextTheme,
+        },
+      });
+    }
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -148,6 +180,31 @@ export default function Navbar() {
               Login
             </Link>
           )}
+
+          <label className="inline-flex cursor-pointer items-center gap-2 px-2 py-2 text-zinc-400 transition hover:text-white">
+            <span className="text-xs font-semibold">
+              {theme === "dark" ? "Dark" : "Light"}
+            </span>
+            <input
+              type="checkbox"
+              checked={theme === "light"}
+              onChange={toggleTheme}
+              className="sr-only"
+              aria-label="Toggle color theme"
+            />
+            <span
+              className={`relative h-5 w-9 rounded-full transition ${
+                theme === "light" ? "bg-[#F47725]" : "bg-[#454550]"
+              }`}
+              aria-hidden="true"
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition ${
+                  theme === "light" ? "left-4" : "left-0.5"
+                }`}
+              />
+            </span>
+          </label>
         </nav>
       </div>
     </header>

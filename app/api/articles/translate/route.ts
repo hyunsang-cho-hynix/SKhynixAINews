@@ -18,6 +18,48 @@ type TranslationResult = {
   reasonKo: string;
 };
 
+function cleanJsonText(value: string) {
+  return value.replace(/```json/g, "").replace(/```/g, "").trim();
+}
+
+function getReadableError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    return JSON.stringify(error);
+  }
+
+  return "Failed to translate article.";
+}
+
+async function generateTranslationWithFallback({
+  ai,
+  prompt,
+}: {
+  ai: GoogleGenAI;
+  prompt: string;
+}) {
+  const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  let lastError: unknown;
+
+  for (const model of models) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+
+      return response.text ?? "";
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(getReadableError(lastError));
+}
+
 export async function POST(request: Request) {
   try {
     const { articleId } = await request.json();
@@ -98,17 +140,8 @@ JSON format:
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-
-    const text = response.text ?? "";
-
-    const cleanedText = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    const text = await generateTranslationWithFallback({ ai, prompt });
+    const cleanedText = cleanJsonText(text);
 
     let parsed: TranslationResult;
 
@@ -128,7 +161,6 @@ JSON format:
         polished_title_ko: parsed.polishedTitleKo,
         summary_ko: parsed.summaryKo,
         reason_ko: parsed.reasonKo,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", articleId);
 
@@ -146,13 +178,14 @@ JSON format:
       },
     });
   } catch (error) {
+    const errorMessage = getReadableError(error);
+
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to translate article.",
+        error: errorMessage.includes("UNAVAILABLE")
+          ? "Gemini is temporarily overloaded. Please try translation again in a minute."
+          : errorMessage,
       },
       { status: 500 }
     );

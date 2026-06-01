@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
+import { fetchReadableArticleText } from "@/lib/articleContent";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type GNewsArticle = {
@@ -32,6 +33,8 @@ type AiResult = {
   importanceScore: number;
   reason: string;
   reasonKo: string;
+  scoreExplanation?: string;
+  scoreFactors?: Record<string, unknown> | null;
 };
 
 const topics = [
@@ -224,6 +227,26 @@ function estimateKoreanImportanceScore({
   return estimateImportanceScoreFromScore(rawScore);
 }
 
+function buildComparedArticleSnapshot(
+  currentArticle: GNewsArticle,
+  candidateArticles: GNewsArticle[],
+  topic: string
+) {
+  return candidateArticles
+    .filter((article) => article.url !== currentArticle.url)
+    .sort((a, b) => scoreArticle(b, topic) - scoreArticle(a, topic))
+    .slice(0, 5)
+    .map((article) => ({
+      title: article.title,
+      source: article.source?.name || "Unknown source",
+      originalUrl: article.url,
+      publishedAt: article.publishedAt,
+      topic,
+      estimatedImportanceScore: estimateImportanceScore(article, topic),
+      reason: article.description || article.content || "",
+    }));
+}
+
 async function fetchGNewsArticlesForTopic({
   topic,
   apiKey,
@@ -340,24 +363,31 @@ async function processWithGemini(article: GNewsArticle, topic: string) {
   const ai = new GoogleGenAI({
     apiKey,
   });
+  const fullArticleText = await fetchReadableArticleText(article.url);
+  const articleText =
+    fullArticleText || article.description || article.content || article.title;
+  const originalContentReadAt = new Date().toISOString();
 
   const prompt = `
 You are an AI news analyst for an SK hynix-style internal daily technology briefing.
 
-Analyze this public English news article.
+Analyze this public English news article using the full article text when available.
 
 Important:
 - Keep the topic as this exact topic: ${topic}
 - Create a professional English title, summary, and reason.
 - Also create a natural Korean translation suitable for a Korean corporate technology news brief.
 - The Korean text should not sound machine-translated.
-- Keep the summary concise and professional.
+- Write a detailed, factual summary so employees can understand the article without opening the original link.
+- Include concrete companies, products, numbers, dates, market context, and technical details when present.
+- Explain why this matters specifically to SK hynix employees.
+- Do not invent facts that are not in the article.
 
 Article title:
 ${article.title}
 
-Article description:
-${article.description || article.content || "No description provided."}
+Full article text:
+${articleText}
 
 Source:
 ${article.source?.name || "Unknown source"}
@@ -370,11 +400,18 @@ JSON format:
   "polishedTitle": "professional rewritten English title",
   "polishedTitleKo": "professional Korean translated title",
   "topic": "${topic}",
-  "summary": "2 sentence professional English summary",
-  "summaryKo": "2 sentence professional Korean summary",
+  "summary": "detailed professional English summary",
+  "summaryKo": "detailed professional Korean summary",
   "importanceScore": number from 1 to 10,
-  "reason": "brief English reason why this article matters",
-  "reasonKo": "brief Korean reason why this article matters"
+  "reason": "specific English reason why this article matters to SK hynix employees",
+  "reasonKo": "specific Korean reason why this article matters to SK hynix employees",
+  "scoreExplanation": "plain-language English explanation of why this exact score was assigned, including what would make it higher or lower",
+  "scoreFactors": {
+    "skHynixRelevance": "direct, indirect, or low relevance and why",
+    "marketImpact": "customer, competitor, investor, supply-chain, or demand signal",
+    "technologySignal": "technology or product signal considered",
+    "urgency": "why this needs immediate attention or only monitoring"
+  }
 }
 `;
 
@@ -393,6 +430,11 @@ JSON format:
   try {
     const parsed = JSON.parse(cleanedText) as Partial<AiResult>;
 
+    const importanceScore =
+      typeof parsed.importanceScore === "number"
+        ? parsed.importanceScore
+        : estimateImportanceScore(article, topic);
+
     return {
       polishedTitle: parsed.polishedTitle || article.title,
       polishedTitleKo: parsed.polishedTitleKo || article.title,
@@ -403,29 +445,43 @@ JSON format:
         parsed.summary ||
         article.description ||
         article.title,
-      importanceScore:
-        typeof parsed.importanceScore === "number"
-          ? parsed.importanceScore
-          : estimateImportanceScore(article, topic),
+      importanceScore,
       reason:
         parsed.reason ||
         "This article may be relevant to semiconductor, AI, and technology market trends.",
       reasonKo:
         parsed.reasonKo ||
         "이 기사는 반도체, AI 및 기술 시장 흐름과 관련이 있을 수 있습니다.",
+      scoreExplanation:
+        parsed.scoreExplanation ||
+        `This article received ${importanceScore}/10 because it contains signals relevant to SK hynix employee priorities, including memory demand, AI infrastructure, customer and competitor movement, market impact, and semiconductor supply-chain trends.`,
+      scoreFactors: parsed.scoreFactors || null,
+      sourceTextExcerpt: articleText.slice(0, 2000),
+      aiModel: "gemini-2.5-flash",
+      aiProcessedVersion: "daily-brief-v2",
+      originalContentReadAt,
     };
   } catch {
+    const importanceScore = estimateImportanceScore(article, topic);
+
     return {
       polishedTitle: article.title,
       polishedTitleKo: article.title,
       topic,
       summary: article.description || article.content || article.title,
       summaryKo: article.description || article.content || article.title,
-      importanceScore: estimateImportanceScore(article, topic),
+      importanceScore,
       reason:
         "Gemini returned text that was not valid JSON, so the original article description was used.",
       reasonKo:
         "Gemini 응답이 올바른 JSON 형식이 아니어서 원문 설명을 사용했습니다.",
+      scoreExplanation:
+        `This fallback score is ${importanceScore}/10 based on keyword relevance, recency, source metadata, and topic match. Gemini did not return valid structured scoring details for this article.`,
+      scoreFactors: null,
+      sourceTextExcerpt: articleText.slice(0, 2000),
+      aiModel: "gemini-2.5-flash",
+      aiProcessedVersion: "daily-brief-v2",
+      originalContentReadAt,
     };
   }
 }
@@ -525,9 +581,15 @@ async function saveRawKoreanArticle({
 
 async function saveAiProcessedEnglishArticle(
   article: GNewsArticle,
-  topic: string
+  topic: string,
+  candidateArticles: GNewsArticle[]
 ) {
   const aiResult = await processWithGemini(article, topic);
+  const comparedArticleSnapshot = buildComparedArticleSnapshot(
+    article,
+    candidateArticles,
+    topic
+  );
 
   const { error } = await supabaseAdmin
     .from("processed_articles")
@@ -540,9 +602,15 @@ async function saveAiProcessedEnglishArticle(
       importance_score: aiResult.importanceScore,
       reason: aiResult.reason,
       reason_ko: aiResult.reasonKo,
+      score_explanation: aiResult.scoreExplanation,
+      score_factors: aiResult.scoreFactors,
+      compared_article_snapshot: comparedArticleSnapshot,
+      source_text_excerpt: aiResult.sourceTextExcerpt,
+      ai_model: aiResult.aiModel,
+      ai_processed_version: aiResult.aiProcessedVersion,
+      original_content_read_at: aiResult.originalContentReadAt,
       is_ai_processed: true,
       ai_processed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .eq("original_url", article.url);
 
@@ -643,7 +711,7 @@ export async function GET(request: Request) {
 
         for (const article of topEnglishCandidates) {
           try {
-            await saveAiProcessedEnglishArticle(article, topic);
+            await saveAiProcessedEnglishArticle(article, topic, englishArticles);
             topicResult.aiProcessed += 1;
           } catch (error) {
             topicResult.failedAi += 1;

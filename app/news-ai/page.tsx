@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabaseClient";
 
 type SearchResult = {
   title?: string;
+  originalTitle?: string;
   polishedTitle?: string;
   summary?: string;
   reason?: string;
   source?: string;
   url?: string;
+  originalUrl?: string;
+  imageUrl?: string | null;
   publishedAt?: string;
   topic?: string;
   importanceScore?: number;
+  scoreExplanation?: string | null;
+  scoreFactors?: Record<string, unknown> | null;
+  comparedArticleSnapshot?: Record<string, unknown>[] | null;
+  sourceTextExcerpt?: string | null;
+  aiModel?: string | null;
+  aiProcessedVersion?: string | null;
+  originalContentReadAt?: string | null;
 };
 
 export default function NewsAIPage() {
@@ -22,6 +33,25 @@ export default function NewsAIPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [searched, setSearched] = useState(false);
+  const [savingArticleKey, setSavingArticleKey] = useState("");
+  const [savedArticles, setSavedArticles] = useState<Record<string, string>>({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const queryFromUrl = searchParams.get("query");
+
+    if (queryFromUrl) {
+      setQuery(queryFromUrl);
+    }
+
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser();
+      setIsLoggedIn(Boolean(data.user));
+    }
+
+    loadUser();
+  }, []);
 
   async function handleSearch() {
     setErrorMessage("");
@@ -29,6 +59,15 @@ export default function NewsAIPage() {
 
     if (!query.trim()) {
       setErrorMessage("Please enter a search query.");
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      setIsLoggedIn(false);
+      setErrorMessage("Please log in to use Search News + AI.");
       return;
     }
 
@@ -40,6 +79,7 @@ export default function NewsAIPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           query: query.trim(),
@@ -56,6 +96,7 @@ export default function NewsAIPage() {
         data.results || data.articles || data.processedArticles || [];
 
       setResults(searchResults);
+      setSavedArticles({});
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to search news."
@@ -68,6 +109,47 @@ export default function NewsAIPage() {
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       handleSearch();
+    }
+  }
+
+  async function handleSaveArticle(article: SearchResult, articleKey: string) {
+    setSavingArticleKey(articleKey);
+    setErrorMessage("");
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        setIsLoggedIn(false);
+        throw new Error("Please log in to save articles.");
+      }
+
+      const response = await fetch("/api/articles/save-processed", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(article),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save article.");
+      }
+
+      setSavedArticles((currentSavedArticles) => ({
+        ...currentSavedArticles,
+        [articleKey]: data.articleId,
+      }));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to save article."
+      );
+    } finally {
+      setSavingArticleKey("");
     }
   }
 
@@ -103,6 +185,18 @@ export default function NewsAIPage() {
         </div>
 
         <div className="mb-6 rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm">
+          {!isLoggedIn && (
+            <div className="mb-5 rounded-2xl border border-[#F47725]/30 bg-[#F47725]/10 p-4 text-sm text-orange-100">
+              Search News + AI uses Gemini processing and requires login.
+              <Link
+                href="/login"
+                className="ml-2 font-semibold text-[#ffb17a] hover:text-[#F47725]"
+              >
+                Login
+              </Link>
+            </div>
+          )}
+
           <label
             htmlFor="newsSearch"
             className="mb-2 block text-sm font-semibold text-zinc-200"
@@ -124,7 +218,7 @@ export default function NewsAIPage() {
             <button
               type="button"
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || !isLoggedIn}
               className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Searching..." : "Search"}
@@ -183,6 +277,10 @@ export default function NewsAIPage() {
                 const reason =
                   article.reason ||
                   "This article may be relevant to the searched technology topic.";
+                const scoreExplanation = article.scoreExplanation;
+
+                const articleKey = article.url || article.originalUrl || title;
+                const savedArticleId = savedArticles[articleKey];
 
                 return (
                   <article
@@ -223,6 +321,18 @@ export default function NewsAIPage() {
                       </p>
                     </div>
 
+                    {scoreExplanation && (
+                      <div className="mb-4 rounded-xl border border-[#454550] bg-[#26262C] p-3">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                          Score rationale
+                        </p>
+
+                        <p className="line-clamp-3 text-sm leading-6 text-zinc-300">
+                          {scoreExplanation}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="border-t border-[#454550] pt-4 text-sm text-zinc-400">
                       <p className="truncate">
                         {article.source || "Unknown source"}
@@ -233,16 +343,43 @@ export default function NewsAIPage() {
                       )}
                     </div>
 
-                    {article.url && (
-                      <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 inline-flex rounded-xl bg-[#F47725] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff8a3d]"
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveArticle(article, articleKey)}
+                        disabled={
+                          savingArticleKey === articleKey ||
+                          Boolean(savedArticleId)
+                        }
+                        className="rounded-xl bg-[#F47725] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Open Original Article
-                      </a>
-                    )}
+                        {savedArticleId
+                          ? "Saved to Home"
+                          : savingArticleKey === articleKey
+                            ? "Saving..."
+                            : "Save to Home"}
+                      </button>
+
+                      {savedArticleId && (
+                        <Link
+                          href={`/brief-article/${savedArticleId}`}
+                          className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-[#F47725] hover:text-[#ffb17a]"
+                        >
+                          View Saved Brief
+                        </Link>
+                      )}
+
+                      {article.url && (
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-[#F47725] hover:text-[#ffb17a]"
+                        >
+                          Open Original Article
+                        </a>
+                      )}
+                    </div>
                   </article>
                 );
               })}

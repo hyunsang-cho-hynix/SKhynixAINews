@@ -5,6 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabaseClient";
 
+type NewsLanguagePreference = "en" | "ko" | "both";
 type StockRange = "1d" | "5d" | "1mo" | "6mo" | "1y";
 
 type StockWatchItem = {
@@ -35,12 +36,17 @@ type MarketArticle = {
   id: string;
   topic: string;
   polished_title: string;
+  polished_title_ko: string | null;
   summary: string;
+  summary_ko: string | null;
   importance_score: number;
+  reason: string | null;
+  reason_ko: string | null;
   source: string;
   published_at: string;
   image_url: string | null;
   is_ai_processed: boolean;
+  original_language: string | null;
 };
 
 const defaultStocks: StockWatchItem[] = [
@@ -92,6 +98,50 @@ const irLinks = [
     icon: "↗",
   },
 ];
+
+function normalizeLanguagePreference(value: string | null | undefined) {
+  if (value === "ko" || value === "both") {
+    return value;
+  }
+
+  return "en";
+}
+
+function getLanguageLabel(language: NewsLanguagePreference) {
+  if (language === "ko") {
+    return "Korean news only";
+  }
+
+  if (language === "both") {
+    return "English and Korean news";
+  }
+
+  return "English news only";
+}
+
+function getMarketArticleDisplay(
+  article: MarketArticle,
+  language: NewsLanguagePreference
+) {
+  if (language === "ko") {
+    return {
+      title: article.polished_title_ko || article.polished_title,
+      summary: article.summary_ko || article.summary,
+    };
+  }
+
+  if (language === "both" && article.original_language === "ko") {
+    return {
+      title: article.polished_title_ko || article.polished_title,
+      summary: article.summary_ko || article.summary,
+    };
+  }
+
+  return {
+    title: article.polished_title,
+    summary: article.summary,
+  };
+}
 
 function formatNumber(value: number | null) {
   if (value === null || Number.isNaN(value)) {
@@ -261,6 +311,8 @@ export default function StockPage() {
   const [customStocks, setCustomStocks] = useState<StockWatchItem[]>([]);
   const [quotes, setQuotes] = useState<Record<string, QuoteResult>>({});
   const [stockRange, setStockRange] = useState<StockRange>("1mo");
+  const [newsLanguagePreference, setNewsLanguagePreference] =
+    useState<NewsLanguagePreference>("both");
   const [newSymbol, setNewSymbol] = useState("");
   const [newName, setNewName] = useState("");
   const [addingStock, setAddingStock] = useState(false);
@@ -289,7 +341,6 @@ export default function StockPage() {
     }
 
     loadUserAndWatchlist();
-    loadMarketArticles();
   }, []);
 
   useEffect(() => {
@@ -297,6 +348,10 @@ export default function StockPage() {
       loadQuotes(stocks, stockRange);
     }
   }, [stocks, stockRange]);
+
+  useEffect(() => {
+    loadMarketArticles(newsLanguagePreference);
+  }, [newsLanguagePreference]);
 
   function handleStockRangeChange(nextRange: StockRange) {
     setStockRange(nextRange);
@@ -311,10 +366,21 @@ export default function StockPage() {
       if (!user) {
         setUserId("");
         setCustomStocks([]);
+        setNewsLanguagePreference("both");
         return;
       }
 
       setUserId(user.id);
+
+      const { data: preferenceData } = await supabase
+        .from("user_topic_preferences")
+        .select("news_language_preference")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setNewsLanguagePreference(
+        normalizeLanguagePreference(preferenceData?.news_language_preference)
+      );
 
       const { data, error } = await supabase
         .from("user_stock_watchlist")
@@ -459,25 +525,37 @@ export default function StockPage() {
     }
   }
 
-  async function loadMarketArticles() {
+  async function loadMarketArticles(language: NewsLanguagePreference) {
     setLoadingNews(true);
     setErrorMessage("");
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("processed_articles")
         .select(
-          "id, topic, polished_title, summary, importance_score, source, published_at, image_url, is_ai_processed"
+          "id, topic, polished_title, polished_title_ko, summary, summary_ko, importance_score, reason, reason_ko, source, published_at, image_url, is_ai_processed, original_language"
         )
         .eq("topic", "Stock Market")
+        .order("is_ai_processed", { ascending: false })
+        .order("importance_score", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(8);
+
+      if (language === "ko") {
+        query = query.eq("original_language", "ko");
+      }
+
+      if (language === "en") {
+        query = query.or("original_language.eq.en,original_language.is.null");
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
       }
 
-      setMarketArticles(data || []);
+      setMarketArticles((data || []) as MarketArticle[]);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to load market news."
@@ -670,6 +748,9 @@ export default function StockPage() {
               <h2 className="text-2xl font-bold text-white">
                 Market & Technology Headlines
               </h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Language filter: {getLanguageLabel(newsLanguagePreference)}
+              </p>
             </div>
 
             <Link
@@ -695,63 +776,79 @@ export default function StockPage() {
           {!loadingNews && !errorMessage && marketArticles.length === 0 && (
             <div className="rounded-2xl bg-[#26262C] p-8 text-center">
               <h3 className="text-xl font-bold text-white">
-                No market news collected yet
+                No market news for selected language
               </h3>
               <p className="mt-2 text-sm text-zinc-400">
-                Market-related articles will appear here after the daily
-                collection job runs.
+                Try changing your language preference in My Topics or wait for
+                the next daily collection job.
               </p>
             </div>
           )}
 
           {!loadingNews && marketArticles.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2">
-              {marketArticles.map((article) => (
-                <Link
-                  key={article.id}
-                  href={`/brief-article/${article.id}`}
-                  className="group grid gap-4 rounded-2xl border border-[#454550] bg-[#26262C] p-5 transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843] md:grid-cols-[160px_1fr]"
-                >
-                  {article.image_url ? (
-                    <img
-                      src={article.image_url}
-                      alt=""
-                      className="h-32 w-full rounded-xl object-cover md:h-full"
-                    />
-                  ) : (
-                    <div className="flex h-32 w-full items-center justify-center rounded-xl bg-[#303039] text-sm font-semibold text-zinc-500 md:h-full">
-                      No Image
-                    </div>
-                  )}
+              {marketArticles.map((article) => {
+                const display = getMarketArticleDisplay(
+                  article,
+                  newsLanguagePreference
+                );
 
-                  <div>
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-bold text-[#ffb17a]">
-                        {article.topic}
-                      </span>
+                return (
+                  <Link
+                    key={article.id}
+                    href={`/brief-article/${article.id}`}
+                    className="group grid gap-4 rounded-2xl border border-[#454550] bg-[#26262C] p-5 transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843] md:grid-cols-[160px_1fr]"
+                  >
+                    {article.image_url ? (
+                      <img
+                        src={article.image_url}
+                        alt=""
+                        className="h-32 w-full rounded-xl object-cover md:h-full"
+                      />
+                    ) : (
+                      <div className="flex h-32 w-full items-center justify-center rounded-xl bg-[#303039] text-sm font-semibold text-zinc-500 md:h-full">
+                        No Image
+                      </div>
+                    )}
 
-                      {article.is_ai_processed && (
+                    <div>
+                      <div className="mb-2 flex flex-wrap gap-2">
                         <span className="rounded-full border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-1 text-xs font-bold text-[#ffb17a]">
-                          AI Processed
+                          {article.topic}
                         </span>
-                      )}
+
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
+                            article.is_ai_processed
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                              : "border-[#454550] bg-[#303039] text-zinc-400"
+                          }`}
+                        >
+                          {article.is_ai_processed && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          )}
+                          {article.is_ai_processed
+                            ? "AI Processed"
+                            : "Collected"}
+                        </span>
+                      </div>
+
+                      <h3 className="line-clamp-2 text-lg font-bold leading-snug text-white group-hover:text-[#ffb17a]">
+                        {display.title}
+                      </h3>
+
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">
+                        {display.summary}
+                      </p>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-[#454550] pt-3 text-xs text-zinc-500">
+                        <span className="truncate">{article.source}</span>
+                        <span>Score {article.importance_score}/10</span>
+                      </div>
                     </div>
-
-                    <h3 className="line-clamp-2 text-lg font-bold leading-snug text-white group-hover:text-[#ffb17a]">
-                      {article.polished_title}
-                    </h3>
-
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">
-                      {article.summary}
-                    </p>
-
-                    <div className="mt-4 flex items-center justify-between border-t border-[#454550] pt-3 text-xs text-zinc-500">
-                      <span className="truncate">{article.source}</span>
-                      <span>Score {article.importance_score}/10</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>
