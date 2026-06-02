@@ -84,7 +84,7 @@ export default function SignupPage() {
             </p>
 
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              Join SK hynix AI News
+              Join Tech AI News
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-zinc-300">

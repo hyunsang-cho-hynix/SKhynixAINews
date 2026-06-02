@@ -32,6 +32,12 @@ type QuoteResult = {
   points: QuotePoint[];
 };
 
+type StockSearchResult = {
+  symbol: string;
+  name: string;
+  exchange: string;
+};
+
 type MarketArticle = {
   id: string;
   topic: string;
@@ -313,8 +319,11 @@ export default function StockPage() {
   const [stockRange, setStockRange] = useState<StockRange>("1mo");
   const [newsLanguagePreference, setNewsLanguagePreference] =
     useState<NewsLanguagePreference>("both");
-  const [newSymbol, setNewSymbol] = useState("");
-  const [newName, setNewName] = useState("");
+  const [stockSearchQuery, setStockSearchQuery] = useState("");
+  const [stockSearchResults, setStockSearchResults] = useState<
+    StockSearchResult[]
+  >([]);
+  const [searchingStocks, setSearchingStocks] = useState(false);
   const [addingStock, setAddingStock] = useState(false);
   const [marketArticles, setMarketArticles] = useState<MarketArticle[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
@@ -356,6 +365,42 @@ export default function StockPage() {
   function handleStockRangeChange(nextRange: StockRange) {
     setStockRange(nextRange);
     localStorage.setItem("skhynix-ai-news-stock-range", nextRange);
+  }
+
+  async function searchStocks(query: string) {
+    setStockSearchQuery(query);
+
+    if (query.trim().length < 2) {
+      setStockSearchResults([]);
+      setSearchingStocks(false);
+      return;
+    }
+
+    setSearchingStocks(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(
+        `/api/stocks/search?q=${encodeURIComponent(query.trim())}`,
+        {
+          cache: "no-store",
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to search stocks.");
+      }
+
+      setStockSearchResults(data.results || []);
+    } catch (error) {
+      setStockSearchResults([]);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to search stocks."
+      );
+    } finally {
+      setSearchingStocks(false);
+    }
   }
 
   async function loadUserAndWatchlist() {
@@ -451,9 +496,9 @@ export default function StockPage() {
     }
   }
 
-  async function handleAddStock() {
-    const symbol = newSymbol.trim().toUpperCase();
-    const name = newName.trim() || symbol;
+  async function handleAddStock(result: StockSearchResult) {
+    const symbol = result.symbol.trim().toUpperCase();
+    const name = result.name.trim() || symbol;
 
     if (!symbol || addingStock) {
       return;
@@ -467,8 +512,8 @@ export default function StockPage() {
     const alreadyExists = stocks.some((stock) => stock.symbol === symbol);
 
     if (alreadyExists) {
-      setNewSymbol("");
-      setNewName("");
+      setStockSearchQuery("");
+      setStockSearchResults([]);
       return;
     }
 
@@ -480,7 +525,7 @@ export default function StockPage() {
         user_id: userId,
         symbol,
         name,
-        exchange: "NASDAQ",
+        exchange: result.exchange || "Market",
         display_order: customStocks.length + 10,
       });
 
@@ -488,8 +533,8 @@ export default function StockPage() {
         throw error;
       }
 
-      setNewSymbol("");
-      setNewName("");
+      setStockSearchQuery("");
+      setStockSearchResults([]);
       await loadUserAndWatchlist();
     } catch (error) {
       setErrorMessage(
@@ -699,34 +744,64 @@ export default function StockPage() {
                 <div>
                   <h3 className="font-bold text-white">Add ticker</h3>
                   <p className="text-xs text-zinc-400">
-                    Saved to your account
+                    Search and save to your account
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <input
-                  value={newSymbol}
-                  onChange={(event) => setNewSymbol(event.target.value)}
-                  placeholder="Ticker, e.g. TSM"
+                  value={stockSearchQuery}
+                  onChange={(event) => searchStocks(event.target.value)}
+                  placeholder="Search company or ticker"
                   className="w-full rounded-xl border border-[#454550] bg-[#303039] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#F47725]"
                 />
 
-                <input
-                  value={newName}
-                  onChange={(event) => setNewName(event.target.value)}
-                  placeholder="Name optional"
-                  className="w-full rounded-xl border border-[#454550] bg-[#303039] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#F47725]"
-                />
+                {searchingStocks && (
+                  <p className="text-xs text-zinc-500">Searching...</p>
+                )}
 
-                <button
-                  type="button"
-                  onClick={handleAddStock}
-                  disabled={addingStock}
-                  className="w-full rounded-xl bg-[#F47725] px-4 py-3 text-sm font-bold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {addingStock ? "Adding..." : "Add"}
-                </button>
+                {!searchingStocks &&
+                  stockSearchQuery.trim().length >= 2 &&
+                  stockSearchResults.length === 0 && (
+                    <p className="text-xs text-zinc-500">No matches found.</p>
+                  )}
+
+                {stockSearchResults.length > 0 && (
+                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {stockSearchResults.map((result) => {
+                      const alreadyExists = stocks.some(
+                        (stock) => stock.symbol === result.symbol
+                      );
+
+                      return (
+                        <button
+                          key={`${result.symbol}-${result.exchange}`}
+                          type="button"
+                          onClick={() => handleAddStock(result)}
+                          disabled={addingStock || alreadyExists}
+                          className="w-full rounded-xl border border-[#454550] bg-[#303039] px-3 py-3 text-left transition hover:border-[#F47725] hover:bg-[#383843] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-bold text-white">
+                              {result.symbol}
+                            </span>
+                            <span className="text-xs text-zinc-500">
+                              {alreadyExists
+                                ? "Added"
+                                : addingStock
+                                  ? "Adding..."
+                                  : result.exchange}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-1 text-xs text-zinc-400">
+                            {result.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -103,3 +103,17 @@ html[data-theme="light"] select,
 html[data-theme="light"] textarea {
   color: #171717;
 }
+
+.email-preview-banner {
+  background: linear-gradient(135deg, #fff7ed, #ffffff);
+  border-bottom: 1px solid #fed7aa;
+  color: #16181d;
+}
+
+.email-preview-banner-kicker {
+  color: #f47725;
+}
+
+.email-preview-banner-date {
+  color: #657082;
+}

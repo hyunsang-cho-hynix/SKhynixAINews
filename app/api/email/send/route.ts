@@ -46,41 +46,41 @@ function buildEmailHtml(articles: EmailArticle[]) {
         .map((article) => {
           return `
             <tr>
-              <td style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
+              <td class="email-card" bgcolor="#f8fafc" style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
                 <div style="margin-bottom: 8px;">
-                  <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 12px; font-weight: 700;">
+                  <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; background: #F47725; color: #ffffff; font-size: 12px; font-weight: 700;">
                     ${escapeHtml(article.topic)}
                   </span>
-                  <span style="float: right; color: #64748b; font-size: 12px;">
+                  <span class="email-muted" style="float: right; color: #64748b; font-size: 12px;">
                     Score ${article.importanceScore}/10
                   </span>
                 </div>
 
-                <h3 style="margin: 10px 0; color: #0f172a; font-size: 18px; line-height: 1.35;">
+                <h3 class="email-title" style="margin: 10px 0; color: #0f172a; font-size: 18px; line-height: 1.35;">
                   ${escapeHtml(article.polishedTitle)}
                 </h3>
 
-                <p style="margin: 0 0 12px; color: #475569; font-size: 14px; line-height: 1.6;">
+                <p class="email-copy" style="margin: 0 0 12px; color: #475569; font-size: 14px; line-height: 1.6;">
                   ${escapeHtml(article.summary)}
                 </p>
 
-                <div style="margin: 12px 0; padding: 12px; background: #ffffff; border-radius: 10px;">
-                  <p style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                <div class="email-panel" style="margin: 12px 0; padding: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;">
+                  <p class="email-muted" style="margin: 0 0 4px; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase;">
                     Why this matters
                   </p>
-                  <p style="margin: 0; color: #475569; font-size: 13px; line-height: 1.5;">
+                  <p class="email-copy" style="margin: 0; color: #475569; font-size: 13px; line-height: 1.5;">
                     ${escapeHtml(article.reason)}
                   </p>
                 </div>
 
-                <p style="margin: 0 0 12px; color: #64748b; font-size: 12px;">
+                <p class="email-muted" style="margin: 0 0 12px; color: #64748b; font-size: 12px;">
                   Source: ${escapeHtml(article.source)}<br />
                   Published: ${escapeHtml(
                     new Date(article.publishedAt).toLocaleString()
                   )}
                 </p>
 
-                <a href="${escapeHtml(article.originalUrl)}" style="display: inline-block; padding: 10px 14px; border-radius: 8px; background: #2563eb; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none;">
+                <a href="${escapeHtml(article.originalUrl)}" style="display: inline-block; padding: 10px 14px; border-radius: 8px; background: #F47725; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none;">
                   Read Full Article
                 </a>
               </td>
@@ -93,7 +93,7 @@ function buildEmailHtml(articles: EmailArticle[]) {
       return `
         <tr>
           <td style="padding-top: 24px;">
-            <h2 style="margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 22px;">
+            <h2 class="email-title" style="margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 22px;">
               ${escapeHtml(topic)}
             </h2>
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
@@ -108,20 +108,50 @@ function buildEmailHtml(articles: EmailArticle[]) {
   return `
     <!doctype html>
     <html>
-      <body style="margin: 0; padding: 0; background: #0f172a; font-family: Arial, sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background: #0f172a; padding: 32px 12px;">
+      <head>
+        <meta name="color-scheme" content="light only">
+        <meta name="supported-color-schemes" content="light only">
+        <style>
+          :root { color-scheme: light only; supported-color-schemes: light only; }
+          .email-force-light { background-color:#f1f5f9 !important; }
+          .email-paper { background-color:#ffffff !important; border-color:#e2e8f0 !important; }
+          .email-header { background:#fff7ed !important; background-image:linear-gradient(135deg,#fff7ed,#ffffff) !important; color:#0f172a !important; }
+          .email-card { background-color:#f8fafc !important; border-color:#e2e8f0 !important; }
+          .email-panel { background-color:#ffffff !important; border-color:#e2e8f0 !important; }
+          .email-title { color:#0f172a !important; }
+          .email-copy { color:#475569 !important; }
+          .email-muted { color:#64748b !important; }
+          [data-ogsc] .email-force-light { background-color:#f1f5f9 !important; }
+          [data-ogsc] .email-paper, [data-ogsc] .email-panel { background-color:#ffffff !important; }
+          [data-ogsc] .email-card { background-color:#f8fafc !important; }
+          [data-ogsc] .email-title { color:#0f172a !important; }
+          [data-ogsc] .email-copy { color:#475569 !important; }
+          [data-ogsc] .email-muted { color:#64748b !important; }
+          @media (prefers-color-scheme: dark) {
+            .email-force-light { background-color:#f1f5f9 !important; }
+            .email-paper, .email-panel { background-color:#ffffff !important; }
+            .email-card { background-color:#f8fafc !important; }
+            .email-header { background:#fff7ed !important; background-image:linear-gradient(135deg,#fff7ed,#ffffff) !important; }
+            .email-title { color:#0f172a !important; }
+            .email-copy { color:#475569 !important; }
+            .email-muted { color:#64748b !important; }
+          }
+        </style>
+      </head>
+      <body class="email-force-light" style="margin: 0; padding: 0; background: #f1f5f9; font-family: Arial, sans-serif;">
+        <table class="email-force-light" width="100%" cellpadding="0" cellspacing="0" role="presentation" bgcolor="#f1f5f9" style="background: #f1f5f9; padding: 32px 12px;">
           <tr>
             <td align="center">
-              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 720px; background: #ffffff; border-radius: 20px; overflow: hidden;">
+              <table class="email-paper" width="100%" cellpadding="0" cellspacing="0" role="presentation" bgcolor="#ffffff" style="max-width: 720px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden;">
                 <tr>
-                  <td style="padding: 32px; background: linear-gradient(90deg, #2563eb, #06b6d4); color: #ffffff;">
-                    <p style="margin: 0 0 8px; color: #dbeafe; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;">
-                      SK hynix AI News Brief
+                  <td class="email-header" bgcolor="#fff7ed" style="padding: 32px; background: linear-gradient(135deg, #fff7ed, #ffffff); color: #0f172a;">
+                    <p style="margin: 0 0 8px; color: #F47725; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;">
+                      Tech AI News Brief
                     </p>
-                    <h1 style="margin: 0; font-size: 30px; line-height: 1.2;">
+                    <h1 class="email-title" style="margin: 0; color: #0f172a; font-size: 30px; line-height: 1.2;">
                       Daily Semiconductor & Technology Brief
                     </h1>
-                    <p style="margin: 12px 0 0; color: #e0f2fe; font-size: 14px;">
+                    <p class="email-muted" style="margin: 12px 0 0; color: #64748b; font-size: 14px;">
                       ${today}
                     </p>
                   </td>
@@ -129,7 +159,7 @@ function buildEmailHtml(articles: EmailArticle[]) {
 
                 <tr>
                   <td style="padding: 24px 32px 0;">
-                    <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.6;">
+                    <p class="email-copy" style="margin: 0; color: #475569; font-size: 14px; line-height: 1.6;">
                       Good morning. Here are today&apos;s selected articles from public news sources. Each article was processed with AI to generate a professional summary, topic classification, and importance score.
                     </p>
                   </td>
@@ -144,9 +174,9 @@ function buildEmailHtml(articles: EmailArticle[]) {
                 </tr>
 
                 <tr>
-                  <td style="padding: 24px 32px; background: #f1f5f9; color: #64748b; font-size: 12px; text-align: center;">
+                  <td class="email-card email-muted" bgcolor="#f8fafc" style="padding: 24px 32px; background: #f8fafc; color: #64748b; font-size: 12px; text-align: center;">
                     <p style="margin: 0;">
-                      You are receiving this because you subscribed to SK hynix AI News Demo.
+                      You are receiving this because you subscribed to Tech AI News Demo.
                     </p>
                     <p style="margin: 8px 0 0;">
                       Manage topics · Unsubscribe · View in browser
@@ -198,7 +228,7 @@ export async function POST(request: Request) {
     const resend = new Resend(apiKey);
 
     const { data, error } = await resend.emails.send({
-      from: "SK hynix AI News <onboarding@resend.dev>",
+      from: "Tech AI News <onboarding@resend.dev>",
       to: [to],
       subject: "Daily Semiconductor & Technology Brief",
       html: buildEmailHtml(articles),
@@ -230,3 +260,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

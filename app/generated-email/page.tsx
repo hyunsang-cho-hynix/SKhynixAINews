@@ -102,7 +102,7 @@ export default function GeneratedEmailPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#26262C] text-slate-900">
+    <main className="min-h-screen bg-[#26262C] text-white">
       <Navbar />
 
       <section className="mx-auto max-w-4xl px-6 py-10">
@@ -133,7 +133,7 @@ export default function GeneratedEmailPage() {
               value={recipientEmail}
               onChange={(event) => setRecipientEmail(event.target.value)}
               placeholder="recipient@email.com"
-              className="flex-1 rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              className="flex-1 rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[#F47725]"
             />
 
             <button
@@ -180,15 +180,15 @@ export default function GeneratedEmailPage() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-3xl bg-[#303039] shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-8 text-white">
-              <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
-                SK hynix AI News Brief
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-950 shadow-2xl">
+            <div className="email-preview-banner px-8 py-8">
+              <p className="email-preview-banner-kicker text-sm font-semibold uppercase tracking-wide">
+                Tech AI News Brief
               </p>
               <h2 className="mt-2 text-3xl font-bold">
                 Daily Semiconductor & Technology Brief
               </h2>
-              <p className="mt-3 text-blue-50">{today}</p>
+              <p className="email-preview-banner-date mt-3">{today}</p>
             </div>
 
             <div className="px-8 py-6">
@@ -204,7 +204,7 @@ export default function GeneratedEmailPage() {
               {Object.entries(groupedArticles).map(
                 ([topic, topicArticles]) => (
                   <section key={topic}>
-                    <div className="mb-4 border-b border-[#454550] pb-2">
+                    <div className="mb-4 border-b border-slate-200 pb-2">
                       <h3 className="text-xl font-bold text-slate-950">
                         {topic}
                       </h3>
@@ -214,10 +214,10 @@ export default function GeneratedEmailPage() {
                       {topicArticles.map((article) => (
                         <div
                           key={article.originalUrl}
-                          className="rounded-2xl border border-[#454550] bg-[#26262C] p-5"
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
                         >
                           <div className="mb-2 flex items-center justify-between gap-4">
-                            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                            <span className="rounded-full bg-[#F47725] px-3 py-1 text-xs font-semibold text-white">
                               {article.topic}
                             </span>
 
@@ -234,7 +234,7 @@ export default function GeneratedEmailPage() {
                             {article.summary}
                           </p>
 
-                          <div className="mb-4 rounded-xl bg-[#303039] p-4">
+                          <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
                             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                               Why this matters
                             </p>
@@ -267,10 +267,10 @@ export default function GeneratedEmailPage() {
               )}
             </div>
 
-            <div className="bg-[#26262C] px-8 py-6 text-center text-xs text-slate-500">
+            <div className="bg-slate-100 px-8 py-6 text-center text-xs text-slate-500">
               <p>
-                You are receiving this because you subscribed to SK hynix AI
-                News Demo.
+                You are receiving this because you subscribed to Tech AI News
+                Demo.
               </p>
               <p className="mt-2">
                 Manage topics · Unsubscribe · View in browser

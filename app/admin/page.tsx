@@ -23,11 +23,21 @@ type JobResult = {
   error?: string;
 };
 
+type AdminTab = "operations" | "previews" | "diagnostics" | "routes";
+
+type AdminTool = {
+  title: string;
+  description: string;
+  href: string;
+  visibility: "Public" | "Hidden" | "Linked indirectly";
+};
+
 export default function AdminPage() {
   const [cronSecret, setCronSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [jobResult, setJobResult] = useState<JobResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<AdminTab>("operations");
 
   async function runDailyBriefJob() {
     setLoading(true);
@@ -62,38 +72,236 @@ export default function AdminPage() {
     }
   }
 
-  const adminLinks = [
+  const operationTools: AdminTool[] = [
     {
       title: "News + AI",
       description:
         "Search real public news using GNews and process selected articles with Gemini.",
       href: "/news-ai",
-    },
-    {
-      title: "Generated Brief",
-      description:
-        "View articles manually saved to the local generated brief during testing.",
-      href: "/generated-brief",
-    },
-    {
-      title: "Generated Email",
-      description:
-        "Preview and send a test email from manually saved local brief articles.",
-      href: "/generated-email",
+      visibility: "Public",
     },
     {
       title: "Daily Collection",
       description:
         "Run topic-based GNews collection manually for testing. Use carefully because of free API limits.",
       href: "/daily-collection",
+      visibility: "Hidden",
+    },
+    {
+      title: "Generated Brief",
+      description:
+        "View articles manually saved to the local generated brief during testing.",
+      href: "/generated-brief",
+      visibility: "Hidden",
+    },
+  ];
+
+  const previewTools: AdminTool[] = [
+    {
+      title: "Generated Email",
+      description:
+        "Preview and send a test email from manually saved local brief articles.",
+      href: "/generated-email",
+      visibility: "Hidden",
+    },
+    {
+      title: "Daily Email Preview",
+      description: "Static sample of the daily email layout using demo data.",
+      href: "/email-preview",
+      visibility: "Hidden",
+    },
+    {
+      title: "Generated Article Detail",
+      description:
+        "Detail page used by locally generated brief articles. Usually reached from Generated Email.",
+      href: "/generated-article/[id]",
+      visibility: "Linked indirectly",
+    },
+    {
+      title: "Legacy Article Detail",
+      description:
+        "Demo article detail route used by the static email preview sample.",
+      href: "/article/[id]",
+      visibility: "Linked indirectly",
+    },
+  ];
+
+  const diagnosticTools: AdminTool[] = [
+    {
+      title: "AI Test",
+      description: "Manual Gemini connectivity and response test page.",
+      href: "/ai-test",
+      visibility: "Hidden",
+    },
+    {
+      title: "News Test",
+      description: "Manual public news API test page.",
+      href: "/news-test",
+      visibility: "Hidden",
     },
     {
       title: "Supabase Test",
       description:
         "Check whether the app is connected to Supabase Auth and database.",
       href: "/supabase-test",
+      visibility: "Hidden",
     },
   ];
+
+  const routeInventory: AdminTool[] = [
+    {
+      title: "Home",
+      description: "Main public article feed.",
+      href: "/",
+      visibility: "Public",
+    },
+    {
+      title: "Stock",
+      description: "Public stock watchlist and market news page.",
+      href: "/stock",
+      visibility: "Public",
+    },
+    {
+      title: "Subscribe",
+      description: "Public subscription signup flow.",
+      href: "/subscribe",
+      visibility: "Public",
+    },
+    {
+      title: "Login",
+      description: "Public login page.",
+      href: "/login",
+      visibility: "Public",
+    },
+    {
+      title: "Signup",
+      description: "Public signup page, linked from login flow.",
+      href: "/signup",
+      visibility: "Linked indirectly",
+    },
+    {
+      title: "My Topics",
+      description: "User topic and email preference settings.",
+      href: "/settings/topics",
+      visibility: "Public",
+    },
+    {
+      title: "Brief Article Detail",
+      description: "Article detail route reached from the Home feed.",
+      href: "/brief-article/[id]",
+      visibility: "Linked indirectly",
+    },
+    {
+      title: "Topic Detail",
+      description: "Topic-specific article list route.",
+      href: "/topic/[topic]",
+      visibility: "Linked indirectly",
+    },
+    {
+      title: "Unsubscribe",
+      description: "Email unsubscribe route, mainly reached from emails.",
+      href: "/unsubscribe",
+      visibility: "Linked indirectly",
+    },
+    ...operationTools,
+    ...previewTools,
+    ...diagnosticTools,
+  ];
+
+  const tabs: Array<{
+    id: AdminTab;
+    label: string;
+    description: string;
+    tools: AdminTool[];
+  }> = [
+    {
+      id: "operations",
+      label: "Operations",
+      description:
+        "Pages used to run collection, AI processing, and saved-brief workflows.",
+      tools: operationTools,
+    },
+    {
+      id: "previews",
+      label: "Previews",
+      description:
+        "Email and generated-content previews that are useful during development.",
+      tools: previewTools,
+    },
+    {
+      id: "diagnostics",
+      label: "Diagnostics",
+      description:
+        "Connectivity and API test pages that should stay out of the public navbar.",
+      tools: diagnosticTools,
+    },
+    {
+      id: "routes",
+      label: "Route Map",
+      description:
+        "All user-visible and hidden pages currently present in the app.",
+      tools: routeInventory,
+    },
+  ];
+
+  const currentTab = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+
+  const visibilityClass: Record<AdminTool["visibility"], string> = {
+    Public: "border-green-500/30 bg-green-500/10 text-green-200",
+    Hidden: "border-[#F47725]/30 bg-[#F47725]/10 text-[#ffb17a]",
+    "Linked indirectly": "border-sky-500/30 bg-sky-500/10 text-sky-200",
+  };
+
+  const hiddenRoutes = routeInventory.filter(
+    (item) => item.visibility !== "Public"
+  );
+
+  function isConcreteHref(href: string) {
+    return !href.includes("[");
+  }
+
+  function renderToolCard(item: AdminTool) {
+    const content = (
+      <>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h3 className="text-xl font-semibold">{item.title}</h3>
+          <span
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+              visibilityClass[item.visibility]
+            }`}
+          >
+            {item.visibility}
+          </span>
+        </div>
+
+        <p className="text-sm leading-6 text-slate-400">{item.description}</p>
+        <p className="mt-4 text-xs font-semibold text-slate-500">
+          {item.href}
+        </p>
+      </>
+    );
+
+    if (!isConcreteHref(item.href)) {
+      return (
+        <div
+          key={item.href}
+          className="rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm"
+        >
+          {content}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className="rounded-2xl border border-[#454550] bg-[#303039] p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-[#F47725]/70 hover:bg-[#383843]"
+      >
+        {content}
+      </Link>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#26262C] text-white">
@@ -293,27 +501,45 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold">Admin Tools</h2>
-          <p className="text-sm text-slate-400">
-            These pages are useful for testing and operations. They are hidden
-            from the public navbar but available here for admin workflow.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {adminLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-3xl border border-[#454550] bg-[#303039] p-6 shadow-lg transition hover:border-blue-500 hover:bg-slate-800"
-            >
-              <h3 className="mb-2 text-xl font-semibold">{item.title}</h3>
-              <p className="text-sm leading-6 text-slate-400">
-                {item.description}
+        <div className="mb-6 rounded-3xl border border-[#454550] bg-[#303039] p-6">
+          <div className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-2xl font-semibold">Admin Tools</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                Hidden and indirect pages are grouped here instead of being
+                scattered across unrelated flows. Current hidden or indirect
+                pages found: {hiddenRoutes.length}.
               </p>
-            </Link>
-          ))}
+            </div>
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-2 border-b border-[#454550] pb-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === tab.id
+                    ? "bg-[#F47725] text-white"
+                    : "border border-[#454550] bg-[#26262C] text-slate-300 hover:border-[#F47725]/70 hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mb-5">
+            <h3 className="text-xl font-semibold">{currentTab.label}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              {currentTab.description}
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {currentTab.tools.map((item) => renderToolCard(item))}
+          </div>
         </div>
       </section>
     </main>

@@ -658,7 +658,7 @@ export default function Home() {
 
           <div className="px-6 py-5">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F47725]">
-              SK hynix AI News
+              Tech AI News
             </p>
 
             <h2 className="max-w-4xl text-2xl font-bold tracking-tight text-white md:text-3xl">
@@ -869,3 +869,4 @@ export default function Home() {
     </main>
   );
 }
+

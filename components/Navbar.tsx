@@ -89,7 +89,7 @@ export default function Navbar() {
     <header className="border-b border-[#3B3B46] bg-[#26262C]/95 text-white backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link href="/" className="text-base font-bold tracking-tight">
-          SK hynix AI News
+          Tech AI News
         </Link>
 
         <nav className="flex items-center gap-2 text-sm">
@@ -210,3 +210,4 @@ export default function Navbar() {
     </header>
   );
 }
+
