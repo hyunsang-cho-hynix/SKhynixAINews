@@ -36,6 +36,8 @@ type JobResult = {
   requestsPerTopic?: number;
   aiArticlesPerTopic?: number;
   aiProcessingCoverage?: number;
+  aiProcessingConcurrency?: number;
+  aiProcessingDelayMs?: number;
   naverDisplayPerTopic?: string;
   recentNewsWindowHours?: number;
   gnewsLookbackHours?: number;
@@ -103,6 +105,8 @@ type AdminStats = {
       estimatedTokensToday: number;
       configuredAiArticlesPerTopic: number;
       configuredAiProcessingCoverage: number;
+      configuredAiProcessingConcurrency: number;
+      configuredAiProcessingDelayMs: number;
       configuredDelayMs: number;
       note: string;
     };
@@ -670,7 +674,20 @@ export default function AdminPage() {
                     <p>
                       Gemini delay:{" "}
                       <span className="font-semibold text-white">
-                        {adminStats.apiUsage.gemini.configuredDelayMs}ms
+                        {
+                          adminStats.apiUsage.gemini
+                            .configuredAiProcessingDelayMs
+                        }
+                        ms
+                      </span>
+                    </p>
+                    <p>
+                      AI concurrency:{" "}
+                      <span className="font-semibold text-white">
+                        {
+                          adminStats.apiUsage.gemini
+                            .configuredAiProcessingConcurrency
+                        }
                       </span>
                     </p>
                   </div>
@@ -939,6 +956,12 @@ export default function AdminPage() {
                   </p>
                   <p className="mt-2 text-3xl font-bold text-green-50">
                     {jobResult.requestsPerTopic ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">AI Concurrency</p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.aiProcessingConcurrency ?? 1}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">

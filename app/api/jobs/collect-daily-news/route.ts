@@ -338,6 +338,53 @@ function getAiTargetCount(totalArticles: number, coverage: number) {
   return Math.max(1, Math.ceil(totalArticles * coverage));
 }
 
+async function processArticlesWithConcurrency({
+  articles,
+  topic,
+  allCandidates,
+  concurrency,
+  delayMs,
+}: {
+  articles: CollectedArticle[];
+  topic: string;
+  allCandidates: CollectedArticle[];
+  concurrency: number;
+  delayMs: number;
+}) {
+  let nextIndex = 0;
+  const results: { success: boolean; error?: string }[] = [];
+
+  async function worker() {
+    while (nextIndex < articles.length) {
+      const article = articles[nextIndex];
+      nextIndex += 1;
+
+      try {
+        await saveAiProcessedArticle(article, topic, allCandidates);
+        results.push({ success: true });
+      } catch (error) {
+        results.push({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : `Failed to process ${article.originalLanguage} article with Gemini.`,
+        });
+      }
+
+      if (delayMs > 0) {
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.max(1, concurrency) }, () => worker())
+  );
+
+  return results;
+}
+
 function toCollectedEnglishArticle(
   article: GNewsArticle,
   topic: string
@@ -803,7 +850,12 @@ export async function GET(request: Request) {
       Math.floor(dailyRequestBudget / topics.length)
     );
 
-    const geminiDelayMs = Number(process.env.GEMINI_DELAY_MS || "3000");
+    const aiProcessingConcurrency = Number(
+      process.env.AI_PROCESSING_CONCURRENCY || "4"
+    );
+    const aiProcessingDelayMs = Number(
+      process.env.AI_PROCESSING_DELAY_MS || "0"
+    );
     const expiredArticlesDeleted = await cleanupExpiredArticles();
 
     const results: {
@@ -916,21 +968,25 @@ export async function GET(request: Request) {
         .sort((a, b) => b.score - a.score)
         .slice(0, topicResult.aiTargeted);
 
-      for (const article of topAiCandidates) {
-        try {
-          await saveAiProcessedArticle(article, topic, aiCandidates);
-          topicResult.aiProcessed += 1;
-        } catch (error) {
-          topicResult.failedAi += 1;
-          topicResult.errors.push(
-            error instanceof Error
-              ? error.message
-              : `Failed to process ${article.originalLanguage} article with Gemini.`
-          );
-        }
+      const aiResults = await processArticlesWithConcurrency({
+        articles: topAiCandidates,
+        topic,
+        allCandidates: aiCandidates,
+        concurrency: aiProcessingConcurrency,
+        delayMs: aiProcessingDelayMs,
+      });
 
-        await sleep(geminiDelayMs);
-      }
+      topicResult.aiProcessed += aiResults.filter(
+        (result) => result.success
+      ).length;
+      topicResult.failedAi += aiResults.filter(
+        (result) => !result.success
+      ).length;
+      topicResult.errors.push(
+        ...aiResults
+          .map((result) => result.error)
+          .filter((error): error is string => Boolean(error))
+      );
 
       results.push(topicResult);
       await sleep(2500);
@@ -942,6 +998,8 @@ export async function GET(request: Request) {
       dailyRequestBudget,
       requestsPerTopic,
       aiProcessingCoverage,
+      aiProcessingConcurrency,
+      aiProcessingDelayMs,
       naverDisplayPerTopic: process.env.NAVER_NEWS_DISPLAY_PER_TOPIC || "30",
       recentNewsWindowHours: RECENT_NEWS_WINDOW_HOURS,
       gnewsLookbackHours: GNEWS_LOOKBACK_HOURS,

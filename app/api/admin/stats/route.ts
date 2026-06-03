@@ -265,6 +265,12 @@ export async function GET(request: Request) {
           configuredAiProcessingCoverage: Number(
             process.env.AI_PROCESSING_COVERAGE || "0.8"
           ),
+          configuredAiProcessingConcurrency: Number(
+            process.env.AI_PROCESSING_CONCURRENCY || "4"
+          ),
+          configuredAiProcessingDelayMs: Number(
+            process.env.AI_PROCESSING_DELAY_MS || "0"
+          ),
           configuredDelayMs: Number(process.env.GEMINI_DELAY_MS || "3000"),
           note: "Gemini token spend is provider-side; this app estimates calls from AI processed articles saved today. Daily collection targets the configured coverage across English and Korean articles.",
         },
