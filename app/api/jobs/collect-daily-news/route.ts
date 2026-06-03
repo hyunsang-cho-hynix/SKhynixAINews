@@ -88,8 +88,43 @@ const importantKeywords = [
   "investor",
 ];
 
+const RECENT_NEWS_WINDOW_HOURS = 24;
+const ARTICLE_RETENTION_DAYS = 7;
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRecentNewsCutoff() {
+  return new Date(Date.now() - RECENT_NEWS_WINDOW_HOURS * 60 * 60 * 1000);
+}
+
+function isPublishedWithinRecentWindow(publishedAt: string) {
+  const publishedTime = new Date(publishedAt).getTime();
+
+  if (Number.isNaN(publishedTime)) {
+    return false;
+  }
+
+  return publishedTime >= getRecentNewsCutoff().getTime();
+}
+
+async function cleanupExpiredArticles() {
+  const retentionCutoff = new Date(
+    Date.now() - ARTICLE_RETENTION_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const { data, error } = await supabaseAdmin
+    .from("processed_articles")
+    .delete()
+    .lt("published_at", retentionCutoff)
+    .select("id");
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.length || 0;
 }
 
 function getEnglishTopicQuery(topic: string) {
@@ -287,7 +322,11 @@ async function fetchGNewsArticlesForTopic({
       break;
     }
 
-    articles.push(...pageArticles);
+    articles.push(
+      ...pageArticles.filter((article) =>
+        isPublishedWithinRecentWindow(article.publishedAt)
+      )
+    );
     await sleep(Number(process.env.GNEWS_DELAY_MS || "1500"));
   }
 
@@ -334,21 +373,23 @@ async function fetchNaverNewsArticlesForTopic(topic: string) {
     );
   }
 
-  const items = ((data.items || []) as NaverNewsItem[]).map((item) => {
-    const originalUrl = item.originallink || item.link;
-    const title = cleanNaverText(item.title);
-    const description = cleanNaverText(item.description);
-    const source = getHostname(originalUrl);
+  const items = ((data.items || []) as NaverNewsItem[])
+    .filter((item) => isPublishedWithinRecentWindow(item.pubDate))
+    .map((item) => {
+      const originalUrl = item.originallink || item.link;
+      const title = cleanNaverText(item.title);
+      const description = cleanNaverText(item.description);
+      const source = getHostname(originalUrl);
 
-    return {
-      title,
-      description,
-      originalUrl,
-      naverUrl: item.link,
-      source,
-      publishedAt: item.pubDate,
-    };
-  });
+      return {
+        title,
+        description,
+        originalUrl,
+        naverUrl: item.link,
+        source,
+        publishedAt: item.pubDate,
+      };
+    });
 
   return items;
 }
@@ -650,7 +691,7 @@ export async function GET(request: Request) {
     );
 
     const aiArticlesPerTopic = Number(
-      process.env.AI_ARTICLES_PER_TOPIC || "1"
+      process.env.AI_ARTICLES_PER_TOPIC || "5"
     );
 
     const requestsPerTopic = Math.max(
@@ -658,7 +699,8 @@ export async function GET(request: Request) {
       Math.floor(dailyRequestBudget / topics.length)
     );
 
-    const geminiDelayMs = Number(process.env.GEMINI_DELAY_MS || "15000");
+    const geminiDelayMs = Number(process.env.GEMINI_DELAY_MS || "3000");
+    const expiredArticlesDeleted = await cleanupExpiredArticles();
 
     const results: {
       topic: string;
@@ -776,6 +818,10 @@ export async function GET(request: Request) {
       requestsPerTopic,
       aiArticlesPerTopic,
       naverDisplayPerTopic: process.env.NAVER_NEWS_DISPLAY_PER_TOPIC || "30",
+      recentNewsWindowHours: RECENT_NEWS_WINDOW_HOURS,
+      recentNewsCutoff: getRecentNewsCutoff().toISOString(),
+      articleRetentionDays: ARTICLE_RETENTION_DAYS,
+      expiredArticlesDeleted,
       topicsProcessed: topics.length,
       results,
     });

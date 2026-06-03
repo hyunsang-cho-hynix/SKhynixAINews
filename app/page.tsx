@@ -71,6 +71,7 @@ const topicOnlyList = topics.filter((topic) => topic !== "All");
 
 const ALL_ARTICLES_PER_TOPIC = 40;
 const TOPIC_ARTICLE_LIMIT = 200;
+const RECENT_ARTICLE_WINDOW_HOURS = 24;
 
 function normalizeLanguagePreference(value: string | null | undefined) {
   if (value === "ko" || value === "both") {
@@ -529,6 +530,10 @@ export default function Home() {
     setErrorMessage("");
 
     try {
+      const recentArticleCutoff = new Date(
+        Date.now() - RECENT_ARTICLE_WINDOW_HOURS * 60 * 60 * 1000
+      ).toISOString();
+
       if (topic === "All") {
         const topicQueries = await Promise.all(
           topicOnlyList.map(async (topicName) => {
@@ -536,6 +541,7 @@ export default function Home() {
               .from("processed_articles")
               .select("*")
               .eq("topic", topicName)
+              .gte("published_at", recentArticleCutoff)
               .limit(ALL_ARTICLES_PER_TOPIC);
 
             query = applyLanguageFilter(query, language);
@@ -568,6 +574,7 @@ export default function Home() {
         .from("processed_articles")
         .select("*")
         .eq("topic", topic)
+        .gte("published_at", recentArticleCutoff)
         .limit(TOPIC_ARTICLE_LIMIT);
 
       query = applyLanguageFilter(query, language);

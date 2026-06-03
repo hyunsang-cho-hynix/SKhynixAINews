@@ -13,13 +13,32 @@ type SubscriberResult = {
   error?: string;
 };
 
+type CollectionTopicResult = {
+  topic: string;
+  englishFetched: number;
+  englishSaved: number;
+  koreanFetched: number;
+  koreanSaved: number;
+  aiProcessed: number;
+  failedAi: number;
+  errors: string[];
+};
+
 type JobResult = {
   success: boolean;
   message?: string;
   subscribersChecked?: number;
   successfulSends?: number;
   failedSends?: number;
-  results?: SubscriberResult[];
+  dailyRequestBudget?: number;
+  requestsPerTopic?: number;
+  aiArticlesPerTopic?: number;
+  naverDisplayPerTopic?: string;
+  recentNewsWindowHours?: number;
+  articleRetentionDays?: number;
+  expiredArticlesDeleted?: number;
+  topicsProcessed?: number;
+  results?: SubscriberResult[] | CollectionTopicResult[];
   error?: string;
 };
 
@@ -35,12 +54,14 @@ type AdminTool = {
 export default function AdminPage() {
   const [cronSecret, setCronSecret] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activeJob, setActiveJob] = useState<"collection" | "email" | "">("");
   const [jobResult, setJobResult] = useState<JobResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState<AdminTab>("operations");
 
   async function runDailyBriefJob() {
     setLoading(true);
+    setActiveJob("email");
     setJobResult(null);
     setErrorMessage("");
 
@@ -69,6 +90,43 @@ export default function AdminPage() {
       );
     } finally {
       setLoading(false);
+      setActiveJob("");
+    }
+  }
+
+  async function runDailyCollectionJob() {
+    setLoading(true);
+    setActiveJob("collection");
+    setJobResult(null);
+    setErrorMessage("");
+
+    try {
+      if (!cronSecret.trim()) {
+        throw new Error("Please enter CRON_SECRET before running the job.");
+      }
+
+      const response = await fetch(
+        `/api/jobs/collect-daily-news?secret=${encodeURIComponent(
+          cronSecret
+        )}&force=true`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Daily news collection failed.");
+      }
+
+      setJobResult(data);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to run daily news collection."
+      );
+    } finally {
+      setLoading(false);
+      setActiveJob("");
     }
   }
 
@@ -260,6 +318,27 @@ export default function AdminPage() {
     return !href.includes("[");
   }
 
+  function isSubscriberResult(result: unknown): result is SubscriberResult {
+    return Boolean(
+      result &&
+        typeof result === "object" &&
+        "email" in result &&
+        "articlesSent" in result
+    );
+  }
+
+  function isCollectionTopicResult(
+    result: unknown
+  ): result is CollectionTopicResult {
+    return Boolean(
+      result &&
+        typeof result === "object" &&
+        "topic" in result &&
+        "englishFetched" in result &&
+        "aiProcessed" in result
+    );
+  }
+
   function renderToolCard(item: AdminTool) {
     const content = (
       <>
@@ -331,32 +410,46 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <div className="mb-8 rounded-3xl border border-blue-500/30 bg-[#F47725]/10 p-6">
+        <div className="mb-8 rounded-3xl border border-[#F47725]/30 bg-[#F47725]/10 p-6">
           <div className="mb-6">
             <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#ffb17a]">
               Manual Job Runner
             </p>
 
-            <h2 className="text-2xl font-semibold">
-              Run Daily Brief Email Job
-            </h2>
+            <h2 className="text-2xl font-semibold">Daily Brief Controls</h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              This manually runs the same job that Vercel Cron will call every
-              morning. It reads subscribed users from Supabase, finds today&apos;s
-              stored AI-processed articles for each subscriber&apos;s topics, and
-              sends the email through Resend.
+              Run the same collection and email jobs that Vercel Cron calls
+              every morning, or preview the email before sending.
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto_auto]">
             <input
               type="password"
               value={cronSecret}
               onChange={(event) => setCronSecret(event.target.value)}
               placeholder="Enter CRON_SECRET"
-              className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400"
+              className="rounded-xl border border-[#454550] bg-[#26262C] px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[#F47725]"
             />
+
+            <button
+              type="button"
+              onClick={runDailyCollectionJob}
+              disabled={loading}
+              className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading && activeJob === "collection"
+                ? "Collecting..."
+                : "Collect News"}
+            </button>
+
+            <Link
+              href="/email-preview"
+              className="rounded-xl border border-[#454550] bg-[#26262C] px-5 py-3 text-center font-semibold text-zinc-200 hover:border-[#F47725]/70 hover:text-white"
+            >
+              View Email Draft
+            </Link>
 
             <button
               type="button"
@@ -364,7 +457,7 @@ export default function AdminPage() {
               disabled={loading}
               className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Running Job..." : "Run Daily Brief Job"}
+              {loading && activeJob === "email" ? "Sending..." : "Send Email"}
             </button>
           </div>
 
@@ -409,32 +502,79 @@ export default function AdminPage() {
               </span>
             </div>
 
-            <div className="mb-6 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
-                <p className="text-sm text-green-100/60">
-                  Subscribers Checked
-                </p>
-                <p className="mt-2 text-3xl font-bold text-green-50">
-                  {jobResult.subscribersChecked ?? 0}
-                </p>
-              </div>
+            {typeof jobResult.subscribersChecked === "number" && (
+              <div className="mb-6 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">
+                    Subscribers Checked
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.subscribersChecked ?? 0}
+                  </p>
+                </div>
 
-              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
-                <p className="text-sm text-green-100/60">Successful Sends</p>
-                <p className="mt-2 text-3xl font-bold text-green-50">
-                  {jobResult.successfulSends ?? 0}
-                </p>
-              </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">Successful Sends</p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.successfulSends ?? 0}
+                  </p>
+                </div>
 
-              <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
-                <p className="text-sm text-green-100/60">Failed Sends</p>
-                <p className="mt-2 text-3xl font-bold text-green-50">
-                  {jobResult.failedSends ?? 0}
-                </p>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">Failed Sends</p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.failedSends ?? 0}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
-            {jobResult.results && jobResult.results.length > 0 && (
+            {typeof jobResult.topicsProcessed === "number" && (
+              <div className="mb-6 grid gap-4 md:grid-cols-5">
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">Topics</p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.topicsProcessed}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">
+                    AI Articles / Topic
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.aiArticlesPerTopic ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">
+                    Recent Window
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.recentNewsWindowHours ?? 24}h
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">
+                    GNews Requests / Topic
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.requestsPerTopic ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
+                  <p className="text-sm text-green-100/60">
+                    Deleted Old Articles
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-50">
+                    {jobResult.expiredArticlesDeleted ?? 0}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {jobResult.results &&
+              jobResult.results.length > 0 &&
+              isSubscriberResult(jobResult.results[0]) && (
               <div className="overflow-x-auto rounded-2xl border border-green-500/20">
                 <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                   <thead className="bg-[#26262C]/80 text-green-100/70">
@@ -450,6 +590,7 @@ export default function AdminPage() {
 
                   <tbody>
                     {jobResult.results.map((result) => (
+                      isSubscriberResult(result) && (
                       <tr
                         key={result.email}
                         className="border-t border-green-500/20"
@@ -486,11 +627,66 @@ export default function AdminPage() {
                           {result.error || "None"}
                         </td>
                       </tr>
+                      )
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+
+            {jobResult.results &&
+              jobResult.results.length > 0 &&
+              isCollectionTopicResult(jobResult.results[0]) && (
+                <div className="overflow-x-auto rounded-2xl border border-green-500/20">
+                  <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                    <thead className="bg-[#26262C]/80 text-green-100/70">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Topic</th>
+                        <th className="px-4 py-3 font-medium">EN Fetched</th>
+                        <th className="px-4 py-3 font-medium">EN Saved</th>
+                        <th className="px-4 py-3 font-medium">KO Fetched</th>
+                        <th className="px-4 py-3 font-medium">KO Saved</th>
+                        <th className="px-4 py-3 font-medium">AI Done</th>
+                        <th className="px-4 py-3 font-medium">AI Failed</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {jobResult.results.map(
+                        (result) =>
+                          isCollectionTopicResult(result) && (
+                            <tr
+                              key={result.topic}
+                              className="border-t border-green-500/20"
+                            >
+                              <td className="px-4 py-4 text-green-50">
+                                {result.topic}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.englishFetched}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.englishSaved}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.koreanFetched}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.koreanSaved}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.aiProcessed}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.failedAi}
+                              </td>
+                            </tr>
+                          )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
             {jobResult.error && (
               <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">

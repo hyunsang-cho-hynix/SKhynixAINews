@@ -87,6 +87,8 @@ const stockRanges: { label: string; value: StockRange }[] = [
   { label: "1Y", value: "1y" },
 ];
 
+const RECENT_MARKET_NEWS_WINDOW_HOURS = 24;
+
 const irLinks = [
   {
     title: "Financial Statements",
@@ -329,6 +331,7 @@ export default function StockPage() {
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingQuotes, setLoadingQuotes] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [stockActionMessage, setStockActionMessage] = useState("");
 
   const stocks = useMemo(() => {
     return [...defaultStocks, ...customStocks];
@@ -373,11 +376,12 @@ export default function StockPage() {
     if (query.trim().length < 2) {
       setStockSearchResults([]);
       setSearchingStocks(false);
+      setStockActionMessage("");
       return;
     }
 
     setSearchingStocks(true);
-    setErrorMessage("");
+    setStockActionMessage("");
 
     try {
       const response = await fetch(
@@ -395,7 +399,7 @@ export default function StockPage() {
       setStockSearchResults(data.results || []);
     } catch (error) {
       setStockSearchResults([]);
-      setErrorMessage(
+      setStockActionMessage(
         error instanceof Error ? error.message : "Failed to search stocks."
       );
     } finally {
@@ -505,7 +509,7 @@ export default function StockPage() {
     }
 
     if (!userId) {
-      setErrorMessage("Please log in to save custom stock tickers.");
+      setStockActionMessage("Please log in to save custom stock tickers.");
       return;
     }
 
@@ -518,7 +522,7 @@ export default function StockPage() {
     }
 
     setAddingStock(true);
-    setErrorMessage("");
+    setStockActionMessage("");
 
     try {
       const { error } = await supabase.from("user_stock_watchlist").insert({
@@ -537,7 +541,7 @@ export default function StockPage() {
       setStockSearchResults([]);
       await loadUserAndWatchlist();
     } catch (error) {
-      setErrorMessage(
+      setStockActionMessage(
         error instanceof Error ? error.message : "Failed to add stock ticker."
       );
     } finally {
@@ -581,6 +585,12 @@ export default function StockPage() {
           "id, topic, polished_title, polished_title_ko, summary, summary_ko, importance_score, reason, reason_ko, source, published_at, image_url, is_ai_processed, original_language"
         )
         .eq("topic", "Stock Market")
+        .gte(
+          "published_at",
+          new Date(
+            Date.now() - RECENT_MARKET_NEWS_WINDOW_HOURS * 60 * 60 * 1000
+          ).toISOString()
+        )
         .order("is_ai_processed", { ascending: false })
         .order("importance_score", { ascending: false })
         .order("created_at", { ascending: false })
@@ -759,6 +769,12 @@ export default function StockPage() {
 
                 {searchingStocks && (
                   <p className="text-xs text-zinc-500">Searching...</p>
+                )}
+
+                {stockActionMessage && (
+                  <div className="rounded-xl border border-[#F47725]/30 bg-[#F47725]/10 px-3 py-2 text-sm font-semibold text-[#ffb17a]">
+                    {stockActionMessage}
+                  </div>
                 )}
 
                 {!searchingStocks &&

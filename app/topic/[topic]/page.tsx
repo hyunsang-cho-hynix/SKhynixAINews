@@ -20,6 +20,8 @@ type ProcessedArticle = {
   created_at: string;
 };
 
+const RECENT_TOPIC_ARTICLE_WINDOW_HOURS = 24;
+
 type TopicPageProps = {
   params: Promise<{
     topic: string;
@@ -77,6 +79,12 @@ export default function TopicPage({ params }: TopicPageProps) {
         .from("processed_articles")
         .select("*")
         .eq("topic", topic)
+        .gte(
+          "published_at",
+          new Date(
+            Date.now() - RECENT_TOPIC_ARTICLE_WINDOW_HOURS * 60 * 60 * 1000
+          ).toISOString()
+        )
         .order("created_at", { ascending: false })
         .limit(30);
 
