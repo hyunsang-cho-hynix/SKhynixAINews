@@ -21,6 +21,7 @@ type CollectionTopicResult = {
   koreanSaved: number;
   aiCandidates: number;
   aiTargeted: number;
+  aiAlreadyProcessed: number;
   aiProcessed: number;
   failedAi: number;
   errors: string[];
@@ -1051,6 +1052,7 @@ export default function AdminPage() {
                         <th className="px-4 py-3 font-medium">KO Saved</th>
                         <th className="px-4 py-3 font-medium">AI Candidates</th>
                         <th className="px-4 py-3 font-medium">AI Target</th>
+                        <th className="px-4 py-3 font-medium">AI Existing</th>
                         <th className="px-4 py-3 font-medium">AI Done</th>
                         <th className="px-4 py-3 font-medium">AI Failed</th>
                       </tr>
@@ -1084,6 +1086,9 @@ export default function AdminPage() {
                               </td>
                               <td className="px-4 py-4 text-green-100/80">
                                 {result.aiTargeted}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.aiAlreadyProcessed}
                               </td>
                               <td className="px-4 py-4 text-green-100/80">
                                 {result.aiProcessed}

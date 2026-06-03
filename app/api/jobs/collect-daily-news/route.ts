@@ -385,6 +385,28 @@ async function processArticlesWithConcurrency({
   return results;
 }
 
+async function getAiProcessedOriginalUrls(articles: CollectedArticle[]) {
+  const originalUrls = articles
+    .map((article) => article.originalUrl)
+    .filter(Boolean);
+
+  if (originalUrls.length === 0) {
+    return new Set<string>();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("processed_articles")
+    .select("original_url")
+    .in("original_url", originalUrls)
+    .eq("is_ai_processed", true);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set((data || []).map((row) => row.original_url as string));
+}
+
 function toCollectedEnglishArticle(
   article: GNewsArticle,
   topic: string
@@ -866,6 +888,7 @@ export async function GET(request: Request) {
       koreanSaved: number;
       aiCandidates: number;
       aiTargeted: number;
+      aiAlreadyProcessed: number;
       aiProcessed: number;
       failedAi: number;
       errors: string[];
@@ -880,6 +903,7 @@ export async function GET(request: Request) {
         koreanSaved: 0,
         aiCandidates: 0,
         aiTargeted: 0,
+        aiAlreadyProcessed: 0,
         aiProcessed: 0,
         failedAi: 0,
         errors: [] as string[],
@@ -967,9 +991,18 @@ export async function GET(request: Request) {
       const topAiCandidates = [...aiCandidates]
         .sort((a, b) => b.score - a.score)
         .slice(0, topicResult.aiTargeted);
+      const alreadyProcessedUrls = await getAiProcessedOriginalUrls(
+        topAiCandidates
+      );
+      const pendingAiCandidates = topAiCandidates.filter(
+        (article) => !alreadyProcessedUrls.has(article.originalUrl)
+      );
+
+      topicResult.aiAlreadyProcessed =
+        topAiCandidates.length - pendingAiCandidates.length;
 
       const aiResults = await processArticlesWithConcurrency({
-        articles: topAiCandidates,
+        articles: pendingAiCandidates,
         topic,
         allCandidates: aiCandidates,
         concurrency: aiProcessingConcurrency,
