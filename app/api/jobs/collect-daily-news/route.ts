@@ -17,6 +17,7 @@ type GNewsArticle = {
 };
 
 type CollectedArticle = {
+  topic: string;
   title: string;
   description: string;
   content: string;
@@ -26,6 +27,20 @@ type CollectedArticle = {
   sourceName: string;
   originalLanguage: "en" | "ko";
   score: number;
+};
+
+type BackfillArticleRow = {
+  topic: string;
+  original_title: string;
+  summary: string | null;
+  raw_description: string | null;
+  source: string | null;
+  published_at: string;
+  original_url: string;
+  image_url: string | null;
+  original_language: string | null;
+  importance_score: number | null;
+  is_ai_processed: boolean | null;
 };
 
 type NaverNewsItem = {
@@ -360,7 +375,7 @@ async function processArticlesWithConcurrency({
       nextIndex += 1;
 
       try {
-        await saveAiProcessedArticle(article, topic, allCandidates);
+        await saveAiProcessedArticle(article, topic || article.topic, allCandidates);
         results.push({ success: true });
       } catch (error) {
         results.push({
@@ -412,6 +427,7 @@ function toCollectedEnglishArticle(
   topic: string
 ): CollectedArticle {
   return {
+    topic,
     title: article.title,
     description: article.description || "",
     content: article.content || "",
@@ -429,6 +445,7 @@ function toCollectedKoreanArticle(
   topic: string
 ): CollectedArticle {
   return {
+    topic,
     title: article.title,
     description: article.description || "",
     content: article.description || "",
@@ -441,6 +458,78 @@ function toCollectedKoreanArticle(
       `${article.title} ${article.description || ""} ${article.source}`,
       topic
     ),
+  };
+}
+
+function toCollectedBackfillArticle(row: BackfillArticleRow): CollectedArticle {
+  const language = row.original_language === "ko" ? "ko" : "en";
+  const summary = row.raw_description || row.summary || row.original_title;
+
+  return {
+    topic: row.topic,
+    title: row.original_title,
+    description: summary,
+    content: summary,
+    originalUrl: row.original_url,
+    imageUrl: row.image_url,
+    publishedAt: row.published_at,
+    sourceName: row.source || "Unknown source",
+    originalLanguage: language,
+    score: Math.max(1, row.importance_score || 5) * 3,
+  };
+}
+
+async function backfillTodayAiCoverage({
+  coverage,
+  concurrency,
+  delayMs,
+}: {
+  coverage: number;
+  concurrency: number;
+  delayMs: number;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabaseAdmin
+    .from("processed_articles")
+    .select(
+      "topic, original_title, summary, raw_description, source, published_at, original_url, image_url, original_language, importance_score, is_ai_processed"
+    )
+    .eq("collection_date", today)
+    .order("importance_score", { ascending: false })
+    .limit(10000);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data || []) as BackfillArticleRow[];
+  const targetCount = getAiTargetCount(rows.length, coverage);
+  const processedCount = rows.filter((row) => row.is_ai_processed).length;
+  const neededCount = Math.max(0, targetCount - processedCount);
+  const candidates = rows.map(toCollectedBackfillArticle);
+  const pendingCandidates = rows
+    .filter((row) => !row.is_ai_processed)
+    .slice(0, neededCount)
+    .map(toCollectedBackfillArticle);
+
+  const results = await processArticlesWithConcurrency({
+    articles: pendingCandidates,
+    topic: "",
+    allCandidates: candidates,
+    concurrency,
+    delayMs,
+  });
+
+  return {
+    totalArticles: rows.length,
+    targetCount,
+    processedBefore: processedCount,
+    attempted: pendingCandidates.length,
+    processedNow: results.filter((result) => result.success).length,
+    failed: results.filter((result) => !result.success).length,
+    errors: results
+      .map((result) => result.error)
+      .filter((error): error is string => Boolean(error)),
   };
 }
 
@@ -1025,6 +1114,12 @@ export async function GET(request: Request) {
       await sleep(2500);
     }
 
+    const aiBackfill = await backfillTodayAiCoverage({
+      coverage: aiProcessingCoverage,
+      concurrency: aiProcessingConcurrency,
+      delayMs: aiProcessingDelayMs,
+    });
+
     return NextResponse.json({
       success: true,
       message: "Daily news collection completed.",
@@ -1040,6 +1135,7 @@ export async function GET(request: Request) {
       articleRetentionDays: ARTICLE_RETENTION_DAYS,
       expiredArticlesDeleted,
       topicsProcessed: topics.length,
+      aiBackfill,
       results,
     });
   } catch (error) {
