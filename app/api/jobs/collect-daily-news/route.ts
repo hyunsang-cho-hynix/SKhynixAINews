@@ -16,6 +16,18 @@ type GNewsArticle = {
   };
 };
 
+type CollectedArticle = {
+  title: string;
+  description: string;
+  content: string;
+  originalUrl: string;
+  imageUrl: string | null;
+  publishedAt: string;
+  sourceName: string;
+  originalLanguage: "en" | "ko";
+  score: number;
+};
+
 type NaverNewsItem = {
   title: string;
   originallink: string;
@@ -91,6 +103,7 @@ const importantKeywords = [
 const RECENT_NEWS_WINDOW_HOURS = 24;
 const GNEWS_LOOKBACK_HOURS = 72;
 const ARTICLE_RETENTION_DAYS = 7;
+const DEFAULT_AI_PROCESSING_COVERAGE = 0.8;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -285,23 +298,81 @@ function estimateKoreanImportanceScore({
 }
 
 function buildComparedArticleSnapshot(
-  currentArticle: GNewsArticle,
-  candidateArticles: GNewsArticle[],
+  currentArticle: CollectedArticle,
+  candidateArticles: CollectedArticle[],
   topic: string
 ) {
   return candidateArticles
-    .filter((article) => article.url !== currentArticle.url)
-    .sort((a, b) => scoreArticle(b, topic) - scoreArticle(a, topic))
+    .filter((article) => article.originalUrl !== currentArticle.originalUrl)
+    .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map((article) => ({
       title: article.title,
-      source: article.source?.name || "Unknown source",
-      originalUrl: article.url,
+      source: article.sourceName,
+      originalUrl: article.originalUrl,
       publishedAt: article.publishedAt,
       topic,
-      estimatedImportanceScore: estimateImportanceScore(article, topic),
+      originalLanguage: article.originalLanguage,
+      estimatedImportanceScore: estimateImportanceScoreFromScore(article.score),
       reason: article.description || article.content || "",
     }));
+}
+
+function getAiProcessingCoverage() {
+  const coverage = Number(
+    process.env.AI_PROCESSING_COVERAGE || DEFAULT_AI_PROCESSING_COVERAGE
+  );
+
+  if (Number.isNaN(coverage)) {
+    return DEFAULT_AI_PROCESSING_COVERAGE;
+  }
+
+  return Math.min(1, Math.max(0, coverage));
+}
+
+function getAiTargetCount(totalArticles: number, coverage: number) {
+  if (totalArticles === 0 || coverage <= 0) {
+    return 0;
+  }
+
+  return Math.max(1, Math.ceil(totalArticles * coverage));
+}
+
+function toCollectedEnglishArticle(
+  article: GNewsArticle,
+  topic: string
+): CollectedArticle {
+  return {
+    title: article.title,
+    description: article.description || "",
+    content: article.content || "",
+    originalUrl: article.url,
+    imageUrl: article.image || null,
+    publishedAt: article.publishedAt,
+    sourceName: article.source?.name || "Unknown source",
+    originalLanguage: "en",
+    score: scoreArticle(article, topic),
+  };
+}
+
+function toCollectedKoreanArticle(
+  article: Awaited<ReturnType<typeof fetchNaverNewsArticlesForTopic>>[number],
+  topic: string
+): CollectedArticle {
+  return {
+    title: article.title,
+    description: article.description || "",
+    content: article.description || "",
+    originalUrl: article.originalUrl,
+    imageUrl: null,
+    publishedAt: article.publishedAt,
+    sourceName: article.source,
+    originalLanguage: "ko",
+    score: scoreText(
+      `${article.title} ${article.description || ""} ${article.source}`,
+      topic
+    ),
+  };
 }
 
 async function fetchGNewsArticlesForTopic({
@@ -424,7 +495,7 @@ async function fetchNaverNewsArticlesForTopic(topic: string) {
   return items;
 }
 
-async function processWithGemini(article: GNewsArticle, topic: string) {
+async function processWithGemini(article: CollectedArticle, topic: string) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -434,7 +505,8 @@ async function processWithGemini(article: GNewsArticle, topic: string) {
   const ai = new GoogleGenAI({
     apiKey,
   });
-  const fullArticleText = await fetchReadableArticleText(article.url);
+
+  const fullArticleText = await fetchReadableArticleText(article.originalUrl);
   const articleText =
     fullArticleText || article.description || article.content || article.title;
   const originalContentReadAt = new Date().toISOString();
@@ -442,13 +514,14 @@ async function processWithGemini(article: GNewsArticle, topic: string) {
   const prompt = `
 You are an AI news analyst for an SK hynix-style internal daily technology briefing.
 
-Analyze this public English news article using the full article text when available.
+Analyze this public ${article.originalLanguage === "ko" ? "Korean" : "English"} news article using the full article text when available.
 
 Important:
 - Keep the topic as this exact topic: ${topic}
 - Create a professional English title, summary, and reason.
-- Also create a natural Korean translation suitable for a Korean corporate technology news brief.
-- The Korean text should not sound machine-translated.
+- Also create a natural Korean title, summary, and reason suitable for a Korean corporate technology news brief.
+- If the original article is Korean, preserve the nuance in Korean and translate accurately into English.
+- If the original article is English, translate naturally into Korean without sounding machine-translated.
 - Write a detailed, factual summary so employees can understand the article without opening the original link.
 - Include concrete companies, products, numbers, dates, market context, and technical details when present.
 - Explain why this matters specifically to SK hynix employees.
@@ -457,11 +530,14 @@ Important:
 Article title:
 ${article.title}
 
+Original language:
+${article.originalLanguage}
+
 Full article text:
 ${articleText}
 
 Source:
-${article.source?.name || "Unknown source"}
+${article.sourceName}
 
 Return ONLY valid JSON.
 Do not include markdown.
@@ -504,7 +580,7 @@ JSON format:
     const importanceScore =
       typeof parsed.importanceScore === "number"
         ? parsed.importanceScore
-        : estimateImportanceScore(article, topic);
+        : estimateImportanceScoreFromScore(article.score);
 
     return {
       polishedTitle: parsed.polishedTitle || article.title,
@@ -533,7 +609,7 @@ JSON format:
       originalContentReadAt,
     };
   } catch {
-    const importanceScore = estimateImportanceScore(article, topic);
+    const importanceScore = estimateImportanceScoreFromScore(article.score);
 
     return {
       polishedTitle: article.title,
@@ -650,10 +726,10 @@ async function saveRawKoreanArticle({
   }
 }
 
-async function saveAiProcessedEnglishArticle(
-  article: GNewsArticle,
+async function saveAiProcessedArticle(
+  article: CollectedArticle,
   topic: string,
-  candidateArticles: GNewsArticle[]
+  candidateArticles: CollectedArticle[]
 ) {
   const aiResult = await processWithGemini(article, topic);
   const comparedArticleSnapshot = buildComparedArticleSnapshot(
@@ -683,7 +759,7 @@ async function saveAiProcessedEnglishArticle(
       is_ai_processed: true,
       ai_processed_at: new Date().toISOString(),
     })
-    .eq("original_url", article.url);
+    .eq("original_url", article.originalUrl);
 
   if (error) {
     throw error;
@@ -720,9 +796,7 @@ export async function GET(request: Request) {
       process.env.GNEWS_DAILY_REQUEST_BUDGET || "35"
     );
 
-    const aiArticlesPerTopic = Number(
-      process.env.AI_ARTICLES_PER_TOPIC || "5"
-    );
+    const aiProcessingCoverage = getAiProcessingCoverage();
 
     const requestsPerTopic = Math.max(
       1,
@@ -738,6 +812,8 @@ export async function GET(request: Request) {
       englishSaved: number;
       koreanFetched: number;
       koreanSaved: number;
+      aiCandidates: number;
+      aiTargeted: number;
       aiProcessed: number;
       failedAi: number;
       errors: string[];
@@ -750,10 +826,13 @@ export async function GET(request: Request) {
         englishSaved: 0,
         koreanFetched: 0,
         koreanSaved: 0,
+        aiCandidates: 0,
+        aiTargeted: 0,
         aiProcessed: 0,
         failedAi: 0,
         errors: [] as string[],
       };
+      const aiCandidates: CollectedArticle[] = [];
 
       try {
         const englishArticles = await fetchGNewsArticlesForTopic({
@@ -763,6 +842,11 @@ export async function GET(request: Request) {
         });
 
         topicResult.englishFetched = englishArticles.length;
+        aiCandidates.push(
+          ...englishArticles.map((article) =>
+            toCollectedEnglishArticle(article, topic)
+          )
+        );
 
         for (const article of englishArticles) {
           try {
@@ -776,26 +860,6 @@ export async function GET(request: Request) {
             );
           }
         }
-
-        const topEnglishCandidates = [...englishArticles]
-          .sort((a, b) => scoreArticle(b, topic) - scoreArticle(a, topic))
-          .slice(0, aiArticlesPerTopic);
-
-        for (const article of topEnglishCandidates) {
-          try {
-            await saveAiProcessedEnglishArticle(article, topic, englishArticles);
-            topicResult.aiProcessed += 1;
-          } catch (error) {
-            topicResult.failedAi += 1;
-            topicResult.errors.push(
-              error instanceof Error
-                ? error.message
-                : "Failed to process English article with Gemini."
-            );
-          }
-
-          await sleep(geminiDelayMs);
-        }
       } catch (error) {
         topicResult.errors.push(
           error instanceof Error
@@ -808,6 +872,11 @@ export async function GET(request: Request) {
         const koreanArticles = await fetchNaverNewsArticlesForTopic(topic);
 
         topicResult.koreanFetched = koreanArticles.length;
+        aiCandidates.push(
+          ...koreanArticles.map((article) =>
+            toCollectedKoreanArticle(article, topic)
+          )
+        );
 
         for (const article of koreanArticles) {
           try {
@@ -837,6 +906,32 @@ export async function GET(request: Request) {
         );
       }
 
+      topicResult.aiCandidates = aiCandidates.length;
+      topicResult.aiTargeted = getAiTargetCount(
+        aiCandidates.length,
+        aiProcessingCoverage
+      );
+
+      const topAiCandidates = [...aiCandidates]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topicResult.aiTargeted);
+
+      for (const article of topAiCandidates) {
+        try {
+          await saveAiProcessedArticle(article, topic, aiCandidates);
+          topicResult.aiProcessed += 1;
+        } catch (error) {
+          topicResult.failedAi += 1;
+          topicResult.errors.push(
+            error instanceof Error
+              ? error.message
+              : `Failed to process ${article.originalLanguage} article with Gemini.`
+          );
+        }
+
+        await sleep(geminiDelayMs);
+      }
+
       results.push(topicResult);
       await sleep(2500);
     }
@@ -846,7 +941,7 @@ export async function GET(request: Request) {
       message: "Daily news collection completed.",
       dailyRequestBudget,
       requestsPerTopic,
-      aiArticlesPerTopic,
+      aiProcessingCoverage,
       naverDisplayPerTopic: process.env.NAVER_NEWS_DISPLAY_PER_TOPIC || "30",
       recentNewsWindowHours: RECENT_NEWS_WINDOW_HOURS,
       gnewsLookbackHours: GNEWS_LOOKBACK_HOURS,

@@ -19,6 +19,8 @@ type CollectionTopicResult = {
   englishSaved: number;
   koreanFetched: number;
   koreanSaved: number;
+  aiCandidates: number;
+  aiTargeted: number;
   aiProcessed: number;
   failedAi: number;
   errors: string[];
@@ -33,6 +35,7 @@ type JobResult = {
   dailyRequestBudget?: number;
   requestsPerTopic?: number;
   aiArticlesPerTopic?: number;
+  aiProcessingCoverage?: number;
   naverDisplayPerTopic?: string;
   recentNewsWindowHours?: number;
   gnewsLookbackHours?: number;
@@ -99,6 +102,7 @@ type AdminStats = {
       estimatedCallsToday: number;
       estimatedTokensToday: number;
       configuredAiArticlesPerTopic: number;
+      configuredAiProcessingCoverage: number;
       configuredDelayMs: number;
       note: string;
     };
@@ -654,12 +658,13 @@ export default function AdminPage() {
                       requests
                     </p>
                     <p>
-                      AI target/topic:{" "}
+                      AI coverage:{" "}
                       <span className="font-semibold text-white">
-                        {
+                        {Math.round(
                           adminStats.apiUsage.gemini
-                            .configuredAiArticlesPerTopic
-                        }
+                            .configuredAiProcessingCoverage * 100
+                        )}
+                        %
                       </span>
                     </p>
                     <p>
@@ -914,10 +919,10 @@ export default function AdminPage() {
                 </div>
                 <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
                   <p className="text-sm text-green-100/60">
-                    AI Articles / Topic
+                    AI Coverage
                   </p>
                   <p className="mt-2 text-3xl font-bold text-green-50">
-                    {jobResult.aiArticlesPerTopic ?? 0}
+                    {Math.round((jobResult.aiProcessingCoverage ?? 0) * 100)}%
                   </p>
                 </div>
                 <div className="rounded-2xl border border-green-500/20 bg-[#26262C]/60 p-5">
@@ -1021,6 +1026,8 @@ export default function AdminPage() {
                         <th className="px-4 py-3 font-medium">EN Saved</th>
                         <th className="px-4 py-3 font-medium">KO Fetched</th>
                         <th className="px-4 py-3 font-medium">KO Saved</th>
+                        <th className="px-4 py-3 font-medium">AI Candidates</th>
+                        <th className="px-4 py-3 font-medium">AI Target</th>
                         <th className="px-4 py-3 font-medium">AI Done</th>
                         <th className="px-4 py-3 font-medium">AI Failed</th>
                       </tr>
@@ -1048,6 +1055,12 @@ export default function AdminPage() {
                               </td>
                               <td className="px-4 py-4 text-green-100/80">
                                 {result.koreanSaved}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.aiCandidates}
+                              </td>
+                              <td className="px-4 py-4 text-green-100/80">
+                                {result.aiTargeted}
                               </td>
                               <td className="px-4 py-4 text-green-100/80">
                                 {result.aiProcessed}

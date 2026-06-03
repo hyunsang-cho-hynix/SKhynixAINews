@@ -262,8 +262,11 @@ export async function GET(request: Request) {
           configuredAiArticlesPerTopic: Number(
             process.env.AI_ARTICLES_PER_TOPIC || "5"
           ),
+          configuredAiProcessingCoverage: Number(
+            process.env.AI_PROCESSING_COVERAGE || "0.8"
+          ),
           configuredDelayMs: Number(process.env.GEMINI_DELAY_MS || "3000"),
-          note: "Gemini token spend is provider-side; this app estimates calls from AI processed articles saved today.",
+          note: "Gemini token spend is provider-side; this app estimates calls from AI processed articles saved today. Daily collection targets the configured coverage across English and Korean articles.",
         },
         resend: {
           loggedSendsToday: emailLogs.length,
