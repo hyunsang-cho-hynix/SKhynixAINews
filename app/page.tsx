@@ -434,6 +434,25 @@ export default function Home() {
     });
   }
 
+  function handleShowAllLanguages() {
+    hasRestoredScroll.current = true;
+    setArticles([]);
+    setNewsLanguagePreference("both");
+
+    saveHomeStateSnapshot({
+      selectedTopic,
+      sortMode,
+      newsLanguagePreference: "both",
+      scrollY: 0,
+      articles: [],
+    });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   async function loadUserPreferences() {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -771,6 +790,18 @@ export default function Home() {
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {newsLanguagePreference !== "both" && (
+                <button
+                  type="button"
+                  onClick={handleShowAllLanguages}
+                  className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
+                >
+                  {newsLanguagePreference === "ko"
+                    ? "영어 + 한국어 기사 보기"
+                    : "Show English + Korean"}
+                </button>
+              )}
+
               <Link
                 href="/settings/topics"
                 className="rounded-xl bg-[#F47725] px-5 py-3 font-semibold text-white hover:bg-[#ff8a3d]"
