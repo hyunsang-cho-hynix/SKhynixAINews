@@ -183,7 +183,7 @@ function buildEmailHtml({
               ? `
                 <div class="email-panel" style="margin:14px 0; padding:12px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px;">
                   <p class="email-muted" style="margin:0 0 6px; color:#94a3b8; font-size:11px; font-weight:700; text-transform:uppercase;">
-                    Korean Translation
+                    한국어 번역
                   </p>
                   ${
                     display.koreanTitle
