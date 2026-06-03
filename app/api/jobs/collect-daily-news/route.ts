@@ -89,6 +89,7 @@ const importantKeywords = [
 ];
 
 const RECENT_NEWS_WINDOW_HOURS = 24;
+const GNEWS_LOOKBACK_HOURS = 72;
 const ARTICLE_RETENTION_DAYS = 7;
 
 function sleep(ms: number) {
@@ -107,6 +108,27 @@ function isPublishedWithinRecentWindow(publishedAt: string) {
   }
 
   return publishedTime >= getRecentNewsCutoff().getTime();
+}
+
+function filterArticlesWithinProviderWindow<T>(
+  articles: T[],
+  getPublishedAt: (article: T) => string
+) {
+  const publishedTimes = articles
+    .map((article) => new Date(getPublishedAt(article)).getTime())
+    .filter((time) => !Number.isNaN(time));
+
+  if (publishedTimes.length === 0) {
+    return [];
+  }
+
+  const providerLatestTime = Math.max(...publishedTimes);
+  const providerCutoff = providerLatestTime - RECENT_NEWS_WINDOW_HOURS * 60 * 60 * 1000;
+
+  return articles.filter((article) => {
+    const publishedTime = new Date(getPublishedAt(article)).getTime();
+    return !Number.isNaN(publishedTime) && publishedTime >= providerCutoff;
+  });
 }
 
 async function cleanupExpiredArticles() {
@@ -302,6 +324,12 @@ async function fetchGNewsArticlesForTopic({
     url.searchParams.set("country", "us");
     url.searchParams.set("max", "10");
     url.searchParams.set("page", String(page));
+    url.searchParams.set("sortby", "publishedAt");
+    url.searchParams.set(
+      "from",
+      new Date(Date.now() - GNEWS_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()
+    );
+    url.searchParams.set("to", new Date().toISOString());
     url.searchParams.set("apikey", apiKey);
 
     const response = await fetch(url.toString(), {
@@ -322,11 +350,7 @@ async function fetchGNewsArticlesForTopic({
       break;
     }
 
-    articles.push(
-      ...pageArticles.filter((article) =>
-        isPublishedWithinRecentWindow(article.publishedAt)
-      )
-    );
+    articles.push(...pageArticles);
     await sleep(Number(process.env.GNEWS_DELAY_MS || "1500"));
   }
 
@@ -337,7 +361,10 @@ async function fetchGNewsArticlesForTopic({
     uniqueMap.set(normalizeUrl(article.url), article);
   }
 
-  return Array.from(uniqueMap.values());
+  return filterArticlesWithinProviderWindow(
+    Array.from(uniqueMap.values()),
+    (article) => article.publishedAt
+  );
 }
 
 async function fetchNaverNewsArticlesForTopic(topic: string) {
@@ -373,9 +400,12 @@ async function fetchNaverNewsArticlesForTopic(topic: string) {
     );
   }
 
-  const items = ((data.items || []) as NaverNewsItem[])
-    .filter((item) => isPublishedWithinRecentWindow(item.pubDate))
-    .map((item) => {
+  const recentItems = filterArticlesWithinProviderWindow(
+    (data.items || []) as NaverNewsItem[],
+    (item) => item.pubDate
+  );
+
+  const items = recentItems.map((item) => {
       const originalUrl = item.originallink || item.link;
       const title = cleanNaverText(item.title);
       const description = cleanNaverText(item.description);
@@ -819,6 +849,7 @@ export async function GET(request: Request) {
       aiArticlesPerTopic,
       naverDisplayPerTopic: process.env.NAVER_NEWS_DISPLAY_PER_TOPIC || "30",
       recentNewsWindowHours: RECENT_NEWS_WINDOW_HOURS,
+      gnewsLookbackHours: GNEWS_LOOKBACK_HOURS,
       recentNewsCutoff: getRecentNewsCutoff().toISOString(),
       articleRetentionDays: ARTICLE_RETENTION_DAYS,
       expiredArticlesDeleted,

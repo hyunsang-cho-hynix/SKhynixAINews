@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { formatArticleTimestamp } from "@/lib/dateFormat";
 import { supabase } from "@/lib/supabaseClient";
 
 type NewsLanguagePreference = "en" | "ko" | "both";
@@ -71,8 +72,6 @@ const topicOnlyList = topics.filter((topic) => topic !== "All");
 
 const ALL_ARTICLES_PER_TOPIC = 40;
 const TOPIC_ARTICLE_LIMIT = 200;
-const RECENT_ARTICLE_WINDOW_HOURS = 24;
-
 function normalizeLanguagePreference(value: string | null | undefined) {
   if (value === "ko" || value === "both") {
     return value;
@@ -530,9 +529,7 @@ export default function Home() {
     setErrorMessage("");
 
     try {
-      const recentArticleCutoff = new Date(
-        Date.now() - RECENT_ARTICLE_WINDOW_HOURS * 60 * 60 * 1000
-      ).toISOString();
+      const collectionDate = new Date().toISOString().slice(0, 10);
 
       if (topic === "All") {
         const topicQueries = await Promise.all(
@@ -541,7 +538,7 @@ export default function Home() {
               .from("processed_articles")
               .select("*")
               .eq("topic", topicName)
-              .gte("published_at", recentArticleCutoff)
+              .eq("collection_date", collectionDate)
               .limit(ALL_ARTICLES_PER_TOPIC);
 
             query = applyLanguageFilter(query, language);
@@ -574,7 +571,7 @@ export default function Home() {
         .from("processed_articles")
         .select("*")
         .eq("topic", topic)
-        .gte("published_at", recentArticleCutoff)
+        .eq("collection_date", collectionDate)
         .limit(TOPIC_ARTICLE_LIMIT);
 
       query = applyLanguageFilter(query, language);
@@ -861,9 +858,10 @@ export default function Home() {
                     <div className="border-t border-[#454550] pt-4 text-sm text-zinc-400">
                       <p className="truncate">{article.source}</p>
                       <p>
-                        {new Date(article.published_at).toLocaleDateString(
-                          newsLanguagePreference === "ko" ? "ko-KR" : "en-US"
-                        )}
+                        {formatArticleTimestamp(article.published_at, {
+                          locale:
+                            newsLanguagePreference === "ko" ? "ko-KR" : "en-US",
+                        })}
                       </p>
                     </div>
                   </div>

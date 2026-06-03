@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { formatArticleTimestamp } from "@/lib/dateFormat";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type NewsLanguagePreference = "en" | "ko" | "both";
@@ -56,6 +57,22 @@ type SubscriberResult = {
   articlesSent: number;
   error?: string;
 };
+
+async function logEmailDelivery(result: SubscriberResult) {
+  try {
+    await supabaseAdmin.from("email_delivery_logs").insert({
+      email: result.email,
+      success: result.success,
+      articles_sent: result.articlesSent,
+      language_preference: result.languagePreference,
+      topics_requested: result.topicsRequested,
+      error: result.error || null,
+      sent_date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    console.warn("Email delivery log skipped:", error);
+  }
+}
 
 function escapeHtml(value: string) {
   return String(value || "")
@@ -358,9 +375,13 @@ function buildEmailHtml({
 async function getTodayAiProcessedArticlesForTopics({
   topics,
   appBaseUrl,
+  timezone,
+  languagePreference,
 }: {
   topics: string[];
   appBaseUrl: string;
+  timezone: string;
+  languagePreference: NewsLanguagePreference;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const maxArticlesPerTopic = Number(
@@ -399,7 +420,10 @@ async function getTodayAiProcessedArticlesForTopics({
         reason: article.reason,
         reasonKo: article.reason_ko,
         source: article.source,
-        publishedAt: new Date(article.published_at).toLocaleString(),
+        publishedAt: formatArticleTimestamp(article.published_at, {
+          locale: languagePreference === "ko" ? "ko-KR" : "en-US",
+          timeZone: timezone || "America/New_York",
+        }),
         internalArticleUrl: `${appBaseUrl}/brief-article/${article.id}`,
       });
     }
@@ -429,6 +453,8 @@ async function processSubscriber({
   const emailArticles = await getTodayAiProcessedArticlesForTopics({
     topics,
     appBaseUrl,
+    timezone: subscriber.timezone,
+    languagePreference,
   });
 
   if (emailArticles.length === 0) {
@@ -536,6 +562,7 @@ export async function GET(request: Request) {
       });
 
       results.push(result);
+      await logEmailDelivery(result);
     }
 
     const successfulSends = results.filter((result) => result.success).length;

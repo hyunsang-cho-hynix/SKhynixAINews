@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
@@ -35,10 +35,78 @@ type JobResult = {
   aiArticlesPerTopic?: number;
   naverDisplayPerTopic?: string;
   recentNewsWindowHours?: number;
+  gnewsLookbackHours?: number;
   articleRetentionDays?: number;
   expiredArticlesDeleted?: number;
   topicsProcessed?: number;
   results?: SubscriberResult[] | CollectionTopicResult[];
+  error?: string;
+};
+
+type AdminStats = {
+  success: boolean;
+  generatedAt: string;
+  today: string;
+  recentWindowHours: number;
+  users: {
+    registered: number;
+    preferenceRows: number;
+    subscribed: number;
+    unsubscribed: number;
+    languagePreferences: Record<string, number>;
+    subscribers: {
+      email: string;
+      sendTime: string | null;
+      timezone: string | null;
+      languagePreference: string;
+    }[];
+  };
+  collection: {
+    todayTotal: number;
+    recentTotal: number;
+    englishToday: number;
+    koreanToday: number;
+    aiProcessedToday: number;
+    awaitingAiToday: number;
+    byTopic: Record<string, number>;
+    byLanguage: Record<string, number>;
+  };
+  email: {
+    logAvailable: boolean;
+    logMessage: string;
+    sentToday: number;
+    failedToday: number;
+    articlesSentToday: number;
+    recipients: {
+      email: string;
+      success: boolean;
+      articles_sent: number;
+      language_preference: string | null;
+      error: string | null;
+      created_at: string;
+    }[];
+  };
+  apiUsage: {
+    gnews: {
+      dailyRequestBudget: number;
+      collectionTopics: number;
+      requestsPerTopic: number;
+      configuredRequestsPerCollection: number;
+      note: string;
+    };
+    gemini: {
+      model: string;
+      estimatedCallsToday: number;
+      estimatedTokensToday: number;
+      configuredAiArticlesPerTopic: number;
+      configuredDelayMs: number;
+      note: string;
+    };
+    resend: {
+      loggedSendsToday: number;
+      note: string;
+    };
+  };
   error?: string;
 };
 
@@ -56,8 +124,50 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [activeJob, setActiveJob] = useState<"collection" | "email" | "">("");
   const [jobResult, setJobResult] = useState<JobResult | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState<AdminTab>("operations");
+
+  useEffect(() => {
+    const savedSecret = window.localStorage.getItem("adminCronSecret") || "";
+
+    if (savedSecret) {
+      setCronSecret(savedSecret);
+      loadAdminStats(savedSecret);
+    }
+  }, []);
+
+  async function loadAdminStats(secret = cronSecret) {
+    setStatsLoading(true);
+    setStatsError("");
+
+    try {
+      if (!secret.trim()) {
+        throw new Error("Enter CRON_SECRET to load private admin stats.");
+      }
+
+      window.localStorage.setItem("adminCronSecret", secret);
+
+      const response = await fetch(
+        `/api/admin/stats?secret=${encodeURIComponent(secret)}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load admin stats.");
+      }
+
+      setAdminStats(data);
+    } catch (error) {
+      setStatsError(
+        error instanceof Error ? error.message : "Failed to load admin stats."
+      );
+    } finally {
+      setStatsLoading(false);
+    }
+  }
 
   async function runDailyBriefJob() {
     setLoading(true);
@@ -82,6 +192,7 @@ export default function AdminPage() {
       }
 
       setJobResult(data);
+      loadAdminStats();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -118,6 +229,7 @@ export default function AdminPage() {
       }
 
       setJobResult(data);
+      loadAdminStats();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -339,6 +451,38 @@ export default function AdminPage() {
     );
   }
 
+  function renderStatCard(label: string, value: string | number, note?: string) {
+    return (
+      <div className="rounded-2xl border border-[#454550] bg-[#303039] p-5">
+        <p className="text-sm text-slate-400">{label}</p>
+        <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+        {note && <p className="mt-2 text-xs leading-5 text-slate-500">{note}</p>}
+      </div>
+    );
+  }
+
+  function renderBreakdown(items: Record<string, number>) {
+    const entries = Object.entries(items);
+
+    if (entries.length === 0) {
+      return <p className="text-sm text-slate-500">No data yet.</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        {entries.map(([label, value]) => (
+          <div
+            key={label}
+            className="flex items-center justify-between gap-4 text-sm"
+          >
+            <span className="truncate text-slate-300">{label}</span>
+            <span className="font-semibold text-white">{value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderToolCard(item: AdminTool) {
     const content = (
       <>
@@ -408,6 +552,237 @@ export default function AdminPage() {
             articles with Gemini, saving internal brief pages, and sending daily
             emails through Resend.
           </p>
+        </div>
+
+        <div className="mb-8 rounded-3xl border border-[#454550] bg-[#303039] p-6">
+          <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#ffb17a]">
+                Operations Snapshot
+              </p>
+              <h2 className="text-2xl font-semibold">Admin Stats</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                Private stats for users, subscriptions, collection volume, AI
+                processing, configured API usage, and today&apos;s email
+                delivery logs.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => loadAdminStats()}
+              disabled={statsLoading}
+              className="rounded-xl border border-[#F47725]/50 bg-[#F47725]/10 px-5 py-3 text-sm font-semibold text-[#ffb17a] hover:bg-[#F47725]/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {statsLoading ? "Loading Stats..." : "Refresh Stats"}
+            </button>
+          </div>
+
+          {statsError && (
+            <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+              {statsError}
+            </div>
+          )}
+
+          {!adminStats && !statsError && (
+            <div className="rounded-2xl border border-[#454550] bg-[#26262C] p-5 text-sm text-slate-400">
+              Enter CRON_SECRET and click Refresh Stats to load private
+              operating metrics.
+            </div>
+          )}
+
+          {adminStats && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {renderStatCard("Registered Users", adminStats.users.registered)}
+                {renderStatCard("Subscribed Users", adminStats.users.subscribed)}
+                {renderStatCard(
+                  "Collected Today",
+                  adminStats.collection.todayTotal,
+                  `${adminStats.collection.englishToday} EN / ${adminStats.collection.koreanToday} KO`
+                )}
+                {renderStatCard(
+                  "AI Processed Today",
+                  adminStats.collection.aiProcessedToday,
+                  `${adminStats.collection.awaitingAiToday} waiting`
+                )}
+                {renderStatCard(
+                  "Recent News Window",
+                  `${adminStats.collection.recentTotal}`,
+                  `${adminStats.recentWindowHours}h published articles`
+                )}
+                {renderStatCard(
+                  "Email Success Today",
+                  adminStats.email.sentToday,
+                  `${adminStats.email.failedToday} failed`
+                )}
+                {renderStatCard(
+                  "Articles Emailed",
+                  adminStats.email.articlesSentToday
+                )}
+                {renderStatCard(
+                  "Gemini Calls Est.",
+                  adminStats.apiUsage.gemini.estimatedCallsToday,
+                  adminStats.apiUsage.gemini.model
+                )}
+                {renderStatCard(
+                  "Gemini Tokens Est.",
+                  adminStats.apiUsage.gemini.estimatedTokensToday.toLocaleString(),
+                  "Approx. saved text tokens"
+                )}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-2xl border border-[#454550] bg-[#26262C] p-5">
+                  <h3 className="mb-4 font-semibold">API Usage</h3>
+                  <div className="space-y-3 text-sm text-slate-300">
+                    <p>
+                      GNews budget:{" "}
+                      <span className="font-semibold text-white">
+                        {adminStats.apiUsage.gnews.dailyRequestBudget}
+                      </span>{" "}
+                      req/day
+                    </p>
+                    <p>
+                      GNews per collection:{" "}
+                      <span className="font-semibold text-white">
+                        {
+                          adminStats.apiUsage.gnews
+                            .configuredRequestsPerCollection
+                        }
+                      </span>{" "}
+                      requests
+                    </p>
+                    <p>
+                      AI target/topic:{" "}
+                      <span className="font-semibold text-white">
+                        {
+                          adminStats.apiUsage.gemini
+                            .configuredAiArticlesPerTopic
+                        }
+                      </span>
+                    </p>
+                    <p>
+                      Gemini delay:{" "}
+                      <span className="font-semibold text-white">
+                        {adminStats.apiUsage.gemini.configuredDelayMs}ms
+                      </span>
+                    </p>
+                  </div>
+                  <p className="mt-4 text-xs leading-5 text-slate-500">
+                    {adminStats.apiUsage.gemini.note}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#454550] bg-[#26262C] p-5">
+                  <h3 className="mb-4 font-semibold">Collected by Topic</h3>
+                  {renderBreakdown(adminStats.collection.byTopic)}
+                </div>
+
+                <div className="rounded-2xl border border-[#454550] bg-[#26262C] p-5">
+                  <h3 className="mb-4 font-semibold">User Languages</h3>
+                  {renderBreakdown(adminStats.users.languagePreferences)}
+                </div>
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <div className="overflow-x-auto rounded-2xl border border-[#454550] bg-[#26262C]">
+                  <div className="border-b border-[#454550] p-5">
+                    <h3 className="font-semibold">Subscribed Recipients</h3>
+                  </div>
+                  <table className="w-full min-w-[620px] text-left text-sm">
+                    <thead className="text-slate-500">
+                      <tr>
+                        <th className="px-5 py-3 font-medium">Email</th>
+                        <th className="px-5 py-3 font-medium">Time</th>
+                        <th className="px-5 py-3 font-medium">Timezone</th>
+                        <th className="px-5 py-3 font-medium">Language</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminStats.users.subscribers.map((subscriber) => (
+                        <tr
+                          key={subscriber.email}
+                          className="border-t border-[#454550]"
+                        >
+                          <td className="px-5 py-4 text-white">
+                            {subscriber.email}
+                          </td>
+                          <td className="px-5 py-4 text-slate-300">
+                            {subscriber.sendTime || "-"}
+                          </td>
+                          <td className="px-5 py-4 text-slate-300">
+                            {subscriber.timezone || "-"}
+                          </td>
+                          <td className="px-5 py-4 text-slate-300">
+                            {subscriber.languagePreference}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-[#454550] bg-[#26262C]">
+                  <div className="border-b border-[#454550] p-5">
+                    <h3 className="font-semibold">Today&apos;s Email Log</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {adminStats.email.logMessage}
+                    </p>
+                  </div>
+                  <table className="w-full min-w-[620px] text-left text-sm">
+                    <thead className="text-slate-500">
+                      <tr>
+                        <th className="px-5 py-3 font-medium">Email</th>
+                        <th className="px-5 py-3 font-medium">Status</th>
+                        <th className="px-5 py-3 font-medium">Articles</th>
+                        <th className="px-5 py-3 font-medium">Language</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminStats.email.recipients.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="px-5 py-6 text-center text-slate-500"
+                          >
+                            No email delivery logs for today.
+                          </td>
+                        </tr>
+                      )}
+                      {adminStats.email.recipients.map((recipient) => (
+                        <tr
+                          key={`${recipient.email}-${recipient.created_at}`}
+                          className="border-t border-[#454550]"
+                        >
+                          <td className="px-5 py-4 text-white">
+                            {recipient.email}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                recipient.success
+                                  ? "bg-emerald-500/10 text-emerald-300"
+                                  : "bg-red-500/10 text-red-300"
+                              }`}
+                            >
+                              {recipient.success ? "Sent" : "Failed"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-slate-300">
+                            {recipient.articles_sent}
+                          </td>
+                          <td className="px-5 py-4 text-slate-300">
+                            {recipient.language_preference || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-8 rounded-3xl border border-[#F47725]/30 bg-[#F47725]/10 p-6">

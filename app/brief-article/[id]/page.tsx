@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { formatArticleTimestamp } from "@/lib/dateFormat";
 import { supabase } from "@/lib/supabaseClient";
 
 type Article = {
@@ -345,7 +346,7 @@ export default function BriefArticlePage() {
                 <span>{article.source}</span>
                 <span>·</span>
                 <span>
-                  {new Date(article.published_at).toLocaleDateString()}
+                  {formatArticleTimestamp(article.published_at)}
                 </span>
                 <span>·</span>
                 <span>Score {article.importance_score}/10</span>
@@ -621,7 +622,7 @@ export default function BriefArticlePage() {
                     Published
                   </p>
                   <p className="text-zinc-200">
-                    {new Date(article.published_at).toLocaleString()}
+                    {formatArticleTimestamp(article.published_at)}
                   </p>
                 </div>
 
@@ -640,7 +641,7 @@ export default function BriefArticlePage() {
                       Original Content Read
                     </p>
                     <p className="text-zinc-200">
-                      {new Date(article.original_content_read_at).toLocaleString()}
+                      {formatArticleTimestamp(article.original_content_read_at)}
                     </p>
                   </div>
                 )}

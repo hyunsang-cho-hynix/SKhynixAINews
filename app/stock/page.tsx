@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { formatArticleTimestamp } from "@/lib/dateFormat";
 import { supabase } from "@/lib/supabaseClient";
 
 type NewsLanguagePreference = "en" | "ko" | "both";
@@ -86,8 +87,6 @@ const stockRanges: { label: string; value: StockRange }[] = [
   { label: "6M", value: "6mo" },
   { label: "1Y", value: "1y" },
 ];
-
-const RECENT_MARKET_NEWS_WINDOW_HOURS = 24;
 
 const irLinks = [
   {
@@ -585,12 +584,7 @@ export default function StockPage() {
           "id, topic, polished_title, polished_title_ko, summary, summary_ko, importance_score, reason, reason_ko, source, published_at, image_url, is_ai_processed, original_language"
         )
         .eq("topic", "Stock Market")
-        .gte(
-          "published_at",
-          new Date(
-            Date.now() - RECENT_MARKET_NEWS_WINDOW_HOURS * 60 * 60 * 1000
-          ).toISOString()
-        )
+        .eq("collection_date", new Date().toISOString().slice(0, 10))
         .order("is_ai_processed", { ascending: false })
         .order("importance_score", { ascending: false })
         .order("created_at", { ascending: false })
@@ -932,8 +926,11 @@ export default function StockPage() {
                         {display.summary}
                       </p>
 
-                      <div className="mt-4 flex items-center justify-between border-t border-[#454550] pt-3 text-xs text-zinc-500">
-                        <span className="truncate">{article.source}</span>
+                      <div className="mt-4 flex items-center justify-between gap-4 border-t border-[#454550] pt-3 text-xs text-zinc-500">
+                        <span className="min-w-0 truncate">
+                          {article.source} ·{" "}
+                          {formatArticleTimestamp(article.published_at)}
+                        </span>
                         <span>Score {article.importance_score}/10</span>
                       </div>
                     </div>

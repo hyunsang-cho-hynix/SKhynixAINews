@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { formatArticleTimestamp } from "@/lib/dateFormat";
 import { supabase } from "@/lib/supabaseClient";
 
 type ProcessedArticle = {
@@ -19,8 +20,6 @@ type ProcessedArticle = {
   image_url: string | null;
   created_at: string;
 };
-
-const RECENT_TOPIC_ARTICLE_WINDOW_HOURS = 24;
 
 type TopicPageProps = {
   params: Promise<{
@@ -79,12 +78,7 @@ export default function TopicPage({ params }: TopicPageProps) {
         .from("processed_articles")
         .select("*")
         .eq("topic", topic)
-        .gte(
-          "published_at",
-          new Date(
-            Date.now() - RECENT_TOPIC_ARTICLE_WINDOW_HOURS * 60 * 60 * 1000
-          ).toISOString()
-        )
+        .eq("collection_date", new Date().toISOString().slice(0, 10))
         .order("created_at", { ascending: false })
         .limit(30);
 
@@ -234,7 +228,7 @@ export default function TopicPage({ params }: TopicPageProps) {
                   <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#454550] pt-4 text-sm">
                     <div className="text-slate-400">
                       <p>{article.source}</p>
-                      <p>{new Date(article.published_at).toLocaleString()}</p>
+                      <p>{formatArticleTimestamp(article.published_at)}</p>
                     </div>
 
                     <Link
